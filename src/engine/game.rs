@@ -9,7 +9,8 @@ pub struct Game {
     pub deck: Deck,
     pub state: GameState,
     pub players: Vec<Player>,
-    pub board: Vec<Card>
+    pub board: Vec<Card>,
+    pub dealer: usize
 }
 
 impl Game {
@@ -23,7 +24,8 @@ impl Game {
             deck: Deck::new(),
             state: GameState::Dealing,
             players,
-            board: vec!()
+            board: vec!(),
+            dealer: 0
         }
     }
 
@@ -84,12 +86,12 @@ impl Game {
 
     }
 
-    pub fn draw_player_number(&self, col: usize, row: usize, player: &Player) {
+    pub fn draw_single_player_chips(&self, col: usize, row: usize, player: &Player) {
         set_color(CREAM, Color::Black);
         clear_section(row, col, row, col + 10);
 
         move_cursor(row, col + 1);
-        write_str(&format!("Chips {}", player.money));
+        write_str(&format!("Chips {:>3}", player.money));
 
         set_color(BAIZE, CREAM);
         move_cursor(row - 1, col);
@@ -98,11 +100,60 @@ impl Game {
         write_str(&"▀".repeat(11));
     }
 
-    pub fn draw_player_numbers(&self) {
-        self.draw_player_number(79, 36, &self.players[0]);
-        self.draw_player_number(5, 30, &self.players[1]);
-        self.draw_player_number(35, 3, &self.players[2]);
-        self.draw_player_number(109, 8, &self.players[3]);
+    pub fn draw_player_chips(&self) {
+        self.draw_single_player_chips(79, 36, &self.players[0]);
+        self.draw_single_player_chips(5, 30, &self.players[1]);
+        self.draw_single_player_chips(35, 3, &self.players[2]);
+        self.draw_single_player_chips(109, 8, &self.players[3]);
+    }
+
+    pub fn draw_single_player_bet(&self, col: usize, row: usize, player: &Player) {
+        set_color(CREAM, Color::Black);
+        clear_section(row, col, row, col + 8);
+
+        move_cursor(row, col + 1);
+        write_str(&format!("Bet {:>3}", player.bet));
+
+        set_color(BAIZE, CREAM);
+        move_cursor(row - 1, col);
+        write_str(&"▄".repeat(9));
+        move_cursor(row + 1, col);
+        write_str(&"▀".repeat(9));
+    }
+
+    pub fn draw_player_bets(&self) {
+        self.draw_single_player_bet(79, 33, &self.players[0]);
+        self.draw_single_player_bet(5, 33, &self.players[1]);
+        self.draw_single_player_bet(35, 6, &self.players[2]);
+        self.draw_single_player_bet(109, 5, &self.players[3]);
+    }
+
+    pub fn draw_dealer_chip_at(&self, row: usize, col: usize) {
+        set_color(Color::Blue, Color::White);
+        move_cursor(row, col);
+        write_str(" D ");
+
+        set_color(Color::Blue, BAIZE);
+        move_cursor(row - 1, col);
+        write_str(&"▀".repeat(3));
+        move_cursor(row + 1, col);
+        write_str(&"▄".repeat(3));
+    }
+
+    pub fn draw_dealer_chip(&self) {
+        set_color(BAIZE, Color::Black);
+        clear_section(29, 43, 31, 46);
+        clear_section(7, 4, 9, 7);
+        clear_section(2, 77, 4, 80);
+        clear_section(29, 108, 31, 111);
+
+        match self.dealer {
+            0 => self.draw_dealer_chip_at(30, 44),
+            1 => self.draw_dealer_chip_at(8, 5),
+            2 => self.draw_dealer_chip_at(3, 78),
+            3 => self.draw_dealer_chip_at(30, 109),
+            _ => unreachable!()
+        }
     }
 
     pub fn update(&mut self) -> bool {
@@ -129,7 +180,9 @@ impl Game {
                 set_color(BAIZE, Color::Black);
                 clear_section(0, 0, 40, 125);
 
-                self.draw_player_numbers();
+                self.draw_player_chips();
+                self.draw_player_bets();
+                self.draw_dealer_chip();
             },
 
             GameState::Round(num_flipped) => {
@@ -165,6 +218,7 @@ impl Game {
             GameState::Resolving => {
                 if self.controls.is_pressed(KeyCode::Enter) {
                     self.state = GameState::Collecting;
+                    self.dealer = (self.dealer + 1) % 4;
                 }
             },
         };
