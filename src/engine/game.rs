@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, terminal::{disable_raw_mode, enable_raw_mode}};
+use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{engine::{console::{clear, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, show_cursor}, controls::Controls, player::Player, state::GameState}, poker::{card::Card, deck::Deck}};
+use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor}, controls::Controls, player::Player, state::GameState}, poker::{card::{Card, BAIZE}, deck::Deck}};
 
 pub struct Game {
     pub controls: Controls,
@@ -89,6 +89,7 @@ impl Game {
             GameState::MainMenu => todo!(),
             
             GameState::Dealing => {
+                // Prepare cards
                 self.deck.shuffle();
 
                 for player in &mut self.players {
@@ -101,7 +102,11 @@ impl Game {
                     self.board.push(self.deck.pop().expect("No more cards"));
                 }
 
-                self.state = GameState::Round(0);
+                self.state = GameState::Round(3);
+
+                // Draw green baize
+                set_color(BAIZE, Color::Black);
+                clear_section(0, 0, 40, 125);
             },
 
             GameState::Round(num_flipped) => {
@@ -152,6 +157,7 @@ impl Game {
             GameState::Collecting => {},
             
             GameState::Round(num_flipped) => {
+                // Center cards
                 for (i, card) in self.board.iter_mut().enumerate() {
                     card.draw(27 + i * 15, 15, i >= num_flipped);
                 }

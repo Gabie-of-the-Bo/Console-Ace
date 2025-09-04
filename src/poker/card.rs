@@ -2,6 +2,8 @@ use crossterm::style::Color;
 
 use crate::engine::console::{clear_section, move_cursor, set_color, write_str};
 
+pub const BAIZE: Color = Color::Rgb { r: 53, g: 101, b: 77 };
+
 #[derive(Clone)]
 pub enum Suit {
     Hearts, Diamonds, Clubs, Spades
@@ -54,14 +56,14 @@ impl Card {
         const HEIGHT: usize = 8;
 
         // Outer square
-        set_color(Color::White, Color::Black);
+        set_color(Color::White, BAIZE);
         clear_section(row, col, row + HEIGHT, col + WIDTH);
 
-        set_color(Color::Black, Color::White);
+        set_color(BAIZE, Color::White);
         move_cursor(row, col);
         write_str(&"▄".repeat(11));
 
-        set_color(Color::White, Color::Black);
+        set_color(Color::White, BAIZE);
         move_cursor(row + HEIGHT, col);
         write_str(&"▄".repeat(11));
 
