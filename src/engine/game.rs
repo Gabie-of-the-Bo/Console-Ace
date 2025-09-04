@@ -90,6 +90,12 @@ impl Game {
 
         move_cursor(row, col + 1);
         write_str(&format!("Chips {}", player.money));
+
+        set_color(BAIZE, CREAM);
+        move_cursor(row - 1, col);
+        write_str(&"▄".repeat(11));
+        move_cursor(row + 1, col);
+        write_str(&"▀".repeat(11));
     }
 
     pub fn draw_player_numbers(&self) {

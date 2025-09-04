@@ -63,10 +63,8 @@ impl Card {
         set_color(BAIZE, Color::White);
         move_cursor(row, col);
         write_str(&"▄".repeat(11));
-
-        set_color(Color::White, BAIZE);
         move_cursor(row + HEIGHT, col);
-        write_str(&"▄".repeat(11));
+        write_str(&"▀".repeat(11));
 
         if back {
             set_color(Color::White, Color::DarkBlue);
