@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor}, controls::Controls, player::Player, state::GameState}, poker::{card::{Card, BAIZE}, deck::Deck}};
+use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::Player, state::GameState}, poker::{card::{Card, BAIZE, CREAM}, deck::Deck}};
 
 pub struct Game {
     pub controls: Controls,
@@ -84,6 +84,21 @@ impl Game {
 
     }
 
+    pub fn draw_player_number(&self, col: usize, row: usize, player: &Player) {
+        set_color(CREAM, Color::Black);
+        clear_section(row, col, row, col + 10);
+
+        move_cursor(row, col + 1);
+        write_str(&format!("Chips {}", player.money));
+    }
+
+    pub fn draw_player_numbers(&self) {
+        self.draw_player_number(79, 36, &self.players[0]);
+        self.draw_player_number(5, 30, &self.players[1]);
+        self.draw_player_number(35, 3, &self.players[2]);
+        self.draw_player_number(109, 8, &self.players[3]);
+    }
+
     pub fn update(&mut self) -> bool {
         match self.state {
             GameState::MainMenu => todo!(),
@@ -107,6 +122,8 @@ impl Game {
                 // Draw green baize
                 set_color(BAIZE, Color::Black);
                 clear_section(0, 0, 40, 125);
+
+                self.draw_player_numbers();
             },
 
             GameState::Round(num_flipped) => {
