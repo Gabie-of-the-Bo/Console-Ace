@@ -1,3 +1,3 @@
 pub enum GameState {
-    MainMenu, Dealing, Round(usize), Resolving, Collecting
+    MainMenu, Dealing, Round(usize, usize), Resolving, Collecting
 }

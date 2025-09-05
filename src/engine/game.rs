@@ -140,6 +140,18 @@ impl Game {
         write_str(&"▄".repeat(3));
     }
 
+    pub fn draw_turn_chip_at(&self, row: usize, col: usize) {
+        set_color(Color::Cyan, Color::Black);
+        move_cursor(row, col);
+        write_str(" T ");
+
+        set_color(Color::Cyan, BAIZE);
+        move_cursor(row - 1, col);
+        write_str(&"▀".repeat(3));
+        move_cursor(row + 1, col);
+        write_str(&"▄".repeat(3));
+    }
+
     pub fn draw_dealer_chip(&self) {
         set_color(BAIZE, Color::Black);
         clear_section(29, 43, 31, 46);
@@ -152,6 +164,22 @@ impl Game {
             1 => self.draw_dealer_chip_at(8, 5),
             2 => self.draw_dealer_chip_at(3, 78),
             3 => self.draw_dealer_chip_at(30, 109),
+            _ => unreachable!()
+        }
+    }
+
+    pub fn draw_turn_chip(&self, turn: usize) {
+        set_color(BAIZE, Color::Black);
+        clear_section(32, 43, 34, 46);
+        clear_section(7, 9, 9, 12);
+        clear_section(2, 82, 4, 85);
+        clear_section(29, 113, 31, 116);
+
+        match turn {
+            0 => self.draw_turn_chip_at(33, 44),
+            1 => self.draw_turn_chip_at(8, 10),
+            2 => self.draw_turn_chip_at(3, 83),
+            3 => self.draw_turn_chip_at(30, 114),
             _ => unreachable!()
         }
     }
@@ -174,7 +202,7 @@ impl Game {
                     self.board.push(self.deck.pop().expect("No more cards"));
                 }
 
-                self.state = GameState::Round(3);
+                self.state = GameState::Round(3, (self.dealer + 1) % 4);
 
                 // Draw green baize
                 set_color(BAIZE, Color::Black);
@@ -185,17 +213,22 @@ impl Game {
                 self.draw_dealer_chip();
             },
 
-            GameState::Round(num_flipped) => {
+            GameState::Round(num_flipped, turn) => {
                 if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
                     self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
 
-                    if num_flipped < 5 {
-                        self.board[num_flipped].reset_draw_cache();
-                        self.state = GameState::Round(num_flipped + 1);
+                    if turn != self.dealer {
+                        self.state = GameState::Round(num_flipped, (turn + 1) % 4);
 
                     } else {
-                        self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
-                        self.state = GameState::Resolving;
+                        if num_flipped < 5 {
+                            self.board[num_flipped].reset_draw_cache();
+                            self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4);
+
+                        } else {
+                            self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
+                            self.state = GameState::Resolving;
+                        }
                     }
                 }
             },
@@ -237,7 +270,9 @@ impl Game {
             GameState::Dealing |
             GameState::Collecting => {},
             
-            GameState::Round(num_flipped) => {
+            GameState::Round(num_flipped, turn) => {
+                self.draw_turn_chip(turn);
+
                 // Center cards
                 for (i, card) in self.board.iter_mut().enumerate() {
                     card.draw(27 + i * 15, 15, i >= num_flipped);
