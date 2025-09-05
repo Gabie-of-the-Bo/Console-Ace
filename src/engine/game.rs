@@ -237,12 +237,9 @@ impl Game {
 
                     } else if sb && !bb { // Big blind
                         self.bet(turn, BIG_BLIND);
-
-                        self.board[0].reset_draw_cache();
-                        self.board[1].reset_draw_cache();
-                        self.board[2].reset_draw_cache();
-                        self.state = GameState::Round(3, (turn + 1) % 4, true, true);
                         
+                        self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, true);
+
                         self.players[0].hand.iter_mut().for_each(Card::reset_draw_cache);
 
                     } else { // Normal turn
@@ -252,10 +249,20 @@ impl Game {
 
                         let balanced_bet = self.players.iter().all(|i| i.bet == self.current_bet);
 
-                        if turn == self.dealer && balanced_bet { // TODO: check balanced bets
+                        if turn == self.dealer && balanced_bet {
                             if num_flipped < 5 {
                                 self.board[num_flipped].reset_draw_cache();
-                                self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, sb, bb);
+
+                                // Pre-flop
+                                if num_flipped == 0 {
+                                    self.board[0].reset_draw_cache();
+                                    self.board[1].reset_draw_cache();
+                                    self.board[2].reset_draw_cache();
+                                    self.state = GameState::Round(3, (turn + 1) % 4, true, true);
+
+                                } else {
+                                    self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, sb, bb);
+                                }
 
                             } else {
                                 // TODO: win bets
