@@ -202,7 +202,7 @@ impl Game {
                     self.board.push(self.deck.pop().expect("No more cards"));
                 }
 
-                self.state = GameState::Round(3, (self.dealer + 1) % 4);
+                self.state = GameState::Round(0, (self.dealer + 1) % 4, false, false);
 
                 // Draw green baize
                 set_color(BAIZE, Color::Black);
@@ -213,17 +213,28 @@ impl Game {
                 self.draw_dealer_chip();
             },
 
-            GameState::Round(num_flipped, turn) => {
+            GameState::Round(num_flipped, turn, sb, bb) => {
                 if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
                     self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
 
                     if turn != self.dealer {
-                        self.state = GameState::Round(num_flipped, (turn + 1) % 4);
+                        if !sb && !bb { // Small blind
+                            self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, bb);
+
+                        } else if sb && !bb { // Big blind
+                            self.board[0].reset_draw_cache();
+                            self.board[1].reset_draw_cache();
+                            self.board[2].reset_draw_cache();
+                            self.state = GameState::Round(3, (turn + 1) % 4, true, true);
+
+                        } else { // Normal turn
+                            self.state = GameState::Round(num_flipped, (turn + 1) % 4, sb, bb);
+                        }
 
                     } else {
                         if num_flipped < 5 {
                             self.board[num_flipped].reset_draw_cache();
-                            self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4);
+                            self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, sb, bb);
 
                         } else {
                             self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
@@ -270,7 +281,7 @@ impl Game {
             GameState::Dealing |
             GameState::Collecting => {},
             
-            GameState::Round(num_flipped, turn) => {
+            GameState::Round(num_flipped, turn, ..) => {
                 self.draw_turn_chip(turn);
 
                 // Center cards
