@@ -78,18 +78,10 @@ impl Controls {
     }
 
     pub fn press(&mut self, key: KeyCode) {
-        if self.is_locked(key) {
-            return;
-        }
-
         *self.keys.entry(key).or_default() = true;
     }
 
     pub fn release(&mut self, key: KeyCode) {
-        if self.is_locked(key) {
-            return;
-        }
-        
         *self.keys.entry(key).or_default() = false;
     }
 

@@ -186,7 +186,9 @@ impl Game {
             },
 
             GameState::Round(num_flipped) => {
-                if self.controls.is_pressed(KeyCode::Enter) {
+                if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
+                    self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
+
                     if num_flipped < 5 {
                         self.board[num_flipped].reset_draw_cache();
                         self.state = GameState::Round(num_flipped + 1);
@@ -216,7 +218,9 @@ impl Game {
             },
 
             GameState::Resolving => {
-                if self.controls.is_pressed(KeyCode::Enter) {
+                if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
+                    self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
+
                     self.state = GameState::Collecting;
                     self.dealer = (self.dealer + 1) % 4;
                 }
