@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::Player, state::GameState}, poker::{card::{Card, BAIZE, CREAM}, deck::Deck}};
+use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM}, deck::Deck}};
 
 pub struct Game {
     pub controls: Controls,
@@ -10,7 +10,8 @@ pub struct Game {
     pub state: GameState,
     pub players: Vec<Player>,
     pub board: Vec<Card>,
-    pub dealer: usize
+    pub dealer: usize,
+    pub current_bet: usize,
 }
 
 impl Game {
@@ -25,7 +26,8 @@ impl Game {
             state: GameState::Dealing,
             players,
             board: vec!(),
-            dealer: 0
+            dealer: 0,
+            current_bet: 0,
         }
     }
 
@@ -184,6 +186,17 @@ impl Game {
         }
     }
 
+    pub fn bet(&mut self, turn: usize, chips: usize) {
+        self.players[turn].bet_chips(chips);
+
+        if self.current_bet < chips {
+            self.current_bet = chips;
+        }
+
+        self.draw_player_chips();
+        self.draw_player_bets();
+    }
+
     pub fn update(&mut self) -> bool {
         match self.state {
             GameState::MainMenu => todo!(),
@@ -217,28 +230,46 @@ impl Game {
                 if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
                     self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
 
-                    if turn != self.dealer {
-                        if !sb && !bb { // Small blind
-                            self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, bb);
+                    if !sb && !bb { // Small blind
+                        self.bet(turn, SMALL_BLIND);
 
-                        } else if sb && !bb { // Big blind
-                            self.board[0].reset_draw_cache();
-                            self.board[1].reset_draw_cache();
-                            self.board[2].reset_draw_cache();
-                            self.state = GameState::Round(3, (turn + 1) % 4, true, true);
+                        self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, bb);
 
-                        } else { // Normal turn
-                            self.state = GameState::Round(num_flipped, (turn + 1) % 4, sb, bb);
+                    } else if sb && !bb { // Big blind
+                        self.bet(turn, BIG_BLIND);
+
+                        self.board[0].reset_draw_cache();
+                        self.board[1].reset_draw_cache();
+                        self.board[2].reset_draw_cache();
+                        self.state = GameState::Round(3, (turn + 1) % 4, true, true);
+                        
+                        self.players[0].hand.iter_mut().for_each(Card::reset_draw_cache);
+
+                    } else { // Normal turn
+                        if self.players[turn].bet < self.current_bet {
+                            self.bet(turn, self.current_bet - self.players[turn].bet);
                         }
 
-                    } else {
-                        if num_flipped < 5 {
-                            self.board[num_flipped].reset_draw_cache();
-                            self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, sb, bb);
+                        let balanced_bet = self.players.iter().all(|i| i.bet == self.current_bet);
+
+                        if turn == self.dealer && balanced_bet { // TODO: check balanced bets
+                            if num_flipped < 5 {
+                                self.board[num_flipped].reset_draw_cache();
+                                self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, sb, bb);
+
+                            } else {
+                                // TODO: win bets
+                                self.players.iter_mut().for_each(Player::take_bet);
+                                self.draw_player_bets();
+                                self.draw_player_chips();
+
+                                // Reset draw cache and proceed
+                                self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
+                                self.state = GameState::Resolving;
+                            }
 
                         } else {
-                            self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
-                            self.state = GameState::Resolving;
+                            self.state = GameState::Round(num_flipped, (turn + 1) % 4, sb, bb);
                         }
                     }
                 }
@@ -267,6 +298,7 @@ impl Game {
 
                     self.state = GameState::Collecting;
                     self.dealer = (self.dealer + 1) % 4;
+                    self.current_bet = 0;
                 }
             },
         };
@@ -281,7 +313,7 @@ impl Game {
             GameState::Dealing |
             GameState::Collecting => {},
             
-            GameState::Round(num_flipped, turn, ..) => {
+            GameState::Round(num_flipped, turn, sb, bb) => {
                 self.draw_turn_chip(turn);
 
                 // Center cards
@@ -303,7 +335,7 @@ impl Game {
                 }
 
                 for (i, card) in self.players[0].hand.iter_mut().enumerate() {
-                    card.draw(25 + 24 + i * 16, 29, false);
+                    card.draw(25 + 24 + i * 16, 29, !sb || !bb);
                 }
             },
 
