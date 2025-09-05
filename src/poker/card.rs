@@ -12,7 +12,7 @@ pub enum Suit {
 
 pub struct Card {
     suit: Suit,
-    number: u8,
+    number: usize,
     drawn: bool
 }
 
@@ -37,7 +37,7 @@ impl Suit {
 }
 
 impl Card {
-    pub fn new(number: u8, suit: Suit) -> Self {
+    pub fn new(number: usize, suit: Suit) -> Self {
         Card { suit, number, drawn: false }
     }
 
