@@ -5,14 +5,14 @@ use crate::engine::console::{clear_section, move_cursor, set_color, write_str};
 pub const BAIZE: Color = Color::Rgb { r: 53, g: 101, b: 77 };
 pub const CREAM: Color = Color::Rgb { r: 227, g: 168, b: 105 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Suit {
     Hearts, Diamonds, Clubs, Spades
 }
 
 pub struct Card {
-    suit: Suit,
-    number: usize,
+    pub suit: Suit,
+    pub number: usize,
     drawn: bool
 }
 
@@ -39,6 +39,13 @@ impl Suit {
 impl Card {
     pub fn new(number: usize, suit: Suit) -> Self {
         Card { suit, number, drawn: false }
+    }
+
+    pub fn value(&self) -> usize {
+        match self.number {
+            1 => 14,
+            n => n
+        }
     }
 
     pub fn reset_draw_cache(&mut self) {
