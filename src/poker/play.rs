@@ -4,20 +4,21 @@ use crate::poker::card::Card;
 
 #[derive(PartialEq, Debug)]
 pub enum Play {
-    Highest(usize),
-    Pair(usize),
-    DoublePair(usize, usize),
-    ThreeOfAKind(usize),
+    Highest(Vec<usize>),
+    Pair(usize, Vec<usize>),
+    DoublePair(usize, usize, Vec<usize>),
+    ThreeOfAKind(usize, Vec<usize>),
     Straight(usize),
     Flush,
-    FullHouse(usize, usize), // Pair, Three of a kind
-    FourOfAKind(usize),
+    FullHouse(usize, usize), // Three of a kind, Pair
+    FourOfAKind(usize, Vec<usize>),
     StraightFlush(usize),
     RoyalFlush
 }
 
 pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
-    let all = hand.iter().chain(community).collect::<Vec<_>>();
+    let mut all = hand.iter().chain(community).collect::<Vec<_>>();
+    all.sort_by_key(|c| c.value());
 
     // Create number map
     let mut numbers = HashMap::<_, Vec<_>>::new();
@@ -65,7 +66,14 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
         .max_by_key(|(i, _)| *i);
 
     if let Some((v, _)) = four {
-        return Play::FourOfAKind(*v);
+        let kickers = all.iter()
+            .map(|c| c.value())
+            .filter(|c| c != v)
+            .rev()
+            .take(1)
+            .collect::<Vec<_>>();
+
+        return Play::FourOfAKind(*v, kickers);
     }    
 
     // Flush (used later)
@@ -97,7 +105,16 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
             return Play::Flush;
         }
 
-        return Play::ThreeOfAKind(*t);
+        let mut kickers = all.iter()
+            .map(|c| c.value())
+            .filter(|c| c != t)
+            .rev()
+            .take(2)
+            .collect::<Vec<_>>();
+
+        kickers.reverse();
+
+        return Play::ThreeOfAKind(*t, kickers);
     }
 
     if flush {
@@ -119,13 +136,30 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
     if pairs.len() >= 2 {
         let num_pairs = pairs.len();
 
-        return Play::DoublePair(pairs[num_pairs - 1], pairs[num_pairs - 2]);
+        let kickers = all.iter()
+            .map(|c| c.value())
+            .filter(|c| *c != pairs[num_pairs - 1])
+            .filter(|c| *c != pairs[num_pairs - 2])
+            .rev()
+            .take(1)
+            .collect::<Vec<_>>();
+
+        return Play::DoublePair(pairs[num_pairs - 1], pairs[num_pairs - 2], kickers);
     }
 
     if pairs.len() == 1 {
-        return Play::Pair(pairs[0]);
+        let mut kickers = all.iter()
+            .map(|c| c.value())
+            .filter(|c| *c != pairs[0])
+            .rev()
+            .take(3)
+            .collect::<Vec<_>>();
+
+        kickers.reverse();
+
+        return Play::Pair(pairs[0], kickers);
     }
 
     // Return highest card
-    Play::Highest(all.iter().max_by_key(|c| c.value()).unwrap().value())
+    Play::Highest(all[all.len() - 5..].iter().map(|c| c.value()).collect())
 }
