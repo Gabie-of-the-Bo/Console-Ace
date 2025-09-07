@@ -18,6 +18,16 @@ pub enum Play {
     RoyalFlush
 }
 
+fn value_to_str(v: usize) -> String {
+    match v {
+        11 => "Jack".into(),
+        12 => "Queen".into(),
+        13 => "King".into(),
+        14 => "Ace".into(),
+        n => n.to_string(),
+    }
+}
+
 impl Play {
     pub fn priority(&self) -> usize {
         match self {
@@ -31,6 +41,21 @@ impl Play {
             Play::FourOfAKind(..) => 7,
             Play::StraightFlush(..) => 8,
             Play::RoyalFlush => 9,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self {
+            Play::Highest(k) => format!("High card {}", value_to_str(k[4])),
+            Play::Pair(p, ..) => format!("Pair of {}s", value_to_str(*p)),
+            Play::DoublePair(p1, p2, ..) => format!("Two Pairs: {}s and {}s", value_to_str(*p1), value_to_str(*p2)),
+            Play::ThreeOfAKind(t, ..) => format!("Three {}s", value_to_str(*t)),
+            Play::Straight(s) => format!("Straight to {}", value_to_str(*s)),
+            Play::Flush(..) => format!("Flush"),
+            Play::FullHouse(t, p) => format!("{}s full of {}s", value_to_str(*t), value_to_str(*p)),
+            Play::FourOfAKind(f, ..) => format!("Four {}s", value_to_str(*f)),
+            Play::StraightFlush(s, ..) => format!("Straight Flush to {}", value_to_str(*s)),
+            Play::RoyalFlush => format!("Royal Flush"),
         }
     }
 }

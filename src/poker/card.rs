@@ -4,6 +4,7 @@ use crate::engine::console::{clear_section, move_cursor, set_color, write_str};
 
 pub const BAIZE: Color = Color::Rgb { r: 53, g: 101, b: 77 };
 pub const CREAM: Color = Color::Rgb { r: 227, g: 168, b: 105 };
+pub const DBLUE: Color = Color::Rgb { r: 8, g: 72, b: 135 };
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Suit {
@@ -39,6 +40,20 @@ impl Suit {
 impl Card {
     pub fn new(number: usize, suit: Suit) -> Self {
         Card { suit, number, drawn: false }
+    }
+
+    pub fn number_to_str(&self) -> String {
+        match self.number {
+            1 => "A".to_string(),
+            11 => "J".to_string(),
+            12 => "Q".to_string(),
+            13 => "K".to_string(),
+            n => n.to_string()
+        }
+    }
+
+    pub fn name(&self) -> String {
+        format!("{}{}", self.number_to_str(), self.suit.symbol())
     }
 
     pub fn value(&self) -> usize {
@@ -93,13 +108,7 @@ impl Card {
         }
         
         // Corner symbols
-        let number = match self.number {
-            1 => "A".to_string(),
-            11 => "J".to_string(),
-            12 => "Q".to_string(),
-            13 => "K".to_string(),
-            n => n.to_string()
-        };
+        let number = self.number_to_str();
 
         set_color(Color::White, self.suit.color());
 

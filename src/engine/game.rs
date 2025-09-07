@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM}, deck::Deck}};
+use crate::{engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
 
 pub struct Game {
     pub controls: Controls,
@@ -88,6 +88,56 @@ impl Game {
 
     }
 
+    pub fn draw_single_player_play(&self, col: usize, row: usize, play: &Play) {
+        let name = format!(" {} ", play.name());
+        let h = name.len() / 2;
+
+        set_color(DBLUE, Color::White);
+        move_cursor(row, col - h);
+        write_str(&name);
+
+        set_color(BAIZE, DBLUE);
+        move_cursor(row - 1, col - h);
+        write_str(&"▄".repeat(name.len()));
+        move_cursor(row + 1, col - h);
+        write_str(&"▀".repeat(name.len()));
+    }
+
+    pub fn draw_single_player_play_left(&self, col: usize, row: usize, play: &Play) {
+        let name = format!(" {} ", play.name());
+
+        set_color(DBLUE, Color::White);
+        move_cursor(row, col);
+        write_str(&name);
+
+        set_color(BAIZE, DBLUE);
+        move_cursor(row - 1, col);
+        write_str(&"▄".repeat(name.len()));
+        move_cursor(row + 1, col);
+        write_str(&"▀".repeat(name.len()));
+    }
+
+    pub fn draw_single_player_play_right(&self, col: usize, row: usize, play: &Play) {
+        let name = format!(" {} ", play.name());
+
+        set_color(DBLUE, Color::White);
+        move_cursor(row, col - name.len());
+        write_str(&name);
+
+        set_color(BAIZE, DBLUE);
+        move_cursor(row - 1, col - name.len());
+        write_str(&"▄".repeat(name.len()));
+        move_cursor(row + 1, col - name.len());
+        write_str(&"▀".repeat(name.len()));
+    }
+
+    pub fn draw_player_plays(&self, plays: &Vec<Play>) {
+        self.draw_single_player_play(62, 26, &plays[0]);
+        self.draw_single_player_play_left(5, 8, &plays[1]);
+        self.draw_single_player_play(62, 13, &plays[2]);
+        self.draw_single_player_play_right(120, 30, &plays[3]);
+    }
+
     pub fn draw_single_player_chips(&self, col: usize, row: usize, player: &Player) {
         set_color(CREAM, Color::Black);
         clear_section(row, col, row, col + 10);
@@ -131,11 +181,11 @@ impl Game {
     }
 
     pub fn draw_dealer_chip_at(&self, row: usize, col: usize) {
-        set_color(Color::Blue, Color::White);
+        set_color(DBLUE, Color::White);
         move_cursor(row, col);
         write_str(" D ");
 
-        set_color(Color::Blue, BAIZE);
+        set_color(DBLUE, BAIZE);
         move_cursor(row - 1, col);
         write_str(&"▀".repeat(3));
         move_cursor(row + 1, col);
@@ -266,6 +316,10 @@ impl Game {
 
                             } else {
                                 // TODO: win bets
+                                let plays = self.players.iter().map(|p| analyze_play(&p.hand, &self.board)).collect::<Vec<_>>();
+
+                                self.draw_player_plays(&plays);
+
                                 self.players.iter_mut().for_each(Player::take_bet);
                                 self.draw_player_bets();
                                 self.draw_player_chips();
