@@ -1,19 +1,100 @@
-use std::collections::{HashMap, HashSet};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}};
+
+use lazy_static::lazy_static;
 
 use crate::poker::card::Card;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Play {
     Highest(Vec<usize>),
     Pair(usize, Vec<usize>),
     DoublePair(usize, usize, Vec<usize>),
     ThreeOfAKind(usize, Vec<usize>),
     Straight(usize),
-    Flush,
+    Flush(Vec<usize>),
     FullHouse(usize, usize), // Three of a kind, Pair
     FourOfAKind(usize, Vec<usize>),
     StraightFlush(usize),
     RoyalFlush
+}
+
+impl Play {
+    pub fn priority(&self) -> usize {
+        match self {
+            Play::Highest(..) => 0,
+            Play::Pair(..) => 1,
+            Play::DoublePair(..) => 2,
+            Play::ThreeOfAKind(..) => 3,
+            Play::Straight(..) => 4,
+            Play::Flush(..) => 5,
+            Play::FullHouse(..) => 6,
+            Play::FourOfAKind(..) => 7,
+            Play::StraightFlush(..) => 8,
+            Play::RoyalFlush => 9,
+        }
+    }
+}
+
+impl PartialOrd for Play {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        use Play::*;
+
+        match self.priority().cmp(&other.priority()) {
+            Ordering::Equal => {
+                match (self, other) {
+                    (Highest(k1), Highest(k2)) => Some(compare_kickers(k1, k2)),
+                    (Pair(p1, k1), Pair(p2, k2)) => Some(p1.cmp(p2).then_with(|| compare_kickers(k1, k2))),
+                    (DoublePair(p11, p12, k1), DoublePair(p21, p22, k2)) => Some(
+                        p11.cmp(p21)
+                        .then_with(|| p12.cmp(p22))
+                        .then_with(|| compare_kickers(k1, k2))
+                    ),
+                    (ThreeOfAKind(t1, k1), ThreeOfAKind(t2, k2)) => Some(t1.cmp(t2).then_with(|| compare_kickers(k1, k2))),
+                    (Straight(h1), Straight(h2)) => Some(h1.cmp(h2)),
+                    (Flush(k1), Flush(k2)) => Some(compare_kickers(k1, k2)),
+                    (FullHouse(t1, p1), FullHouse(t2, p2)) => Some(t1.cmp(t2).then_with(|| p1.cmp(p2))),
+                    (FourOfAKind(f1, k1), FourOfAKind(f2, k2)) => Some(f1.cmp(f2).then_with(|| compare_kickers(k1, k2))),
+                    (StraightFlush(h1), StraightFlush(h2)) => Some(h1.cmp(h2)),
+                    (RoyalFlush, RoyalFlush) => Some(Ordering::Equal),
+
+                    _ => unreachable!()
+                }    
+            },
+
+            c => Some(c)
+        }
+    }
+}
+
+impl Ord for Play {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+pub fn compare_kickers(a: &Vec<usize>, b: &Vec<usize>) -> Ordering {
+    for (i, j) in a.iter().zip(b).rev() {
+        match i.cmp(j) {
+            Ordering::Equal => { },
+            c => { return c; },
+        }
+    }
+
+    Ordering::Equal
+}
+
+lazy_static! {
+    static ref STRAIGHTS: Vec<Vec<usize>> = valid_straights();
+}
+
+fn valid_straights() -> Vec<Vec<usize>> {
+    let mut straights = (2..=10).rev()
+        .map(|i| (i..i + 5).collect::<Vec<_>>())
+        .collect::<Vec<_>>();
+
+    straights.push(vec!(14, 2, 3, 4, 5)); // Ace-low straight
+    
+    straights
 }
 
 pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
@@ -28,15 +109,9 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
     }
 
     // RoyalFlush / StraightFlush / Straight
-    let mut straights = (2..=10).rev()
-        .map(|i| (i..i + 5).collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-
-    straights.push(vec!(14, 2, 3, 4, 5)); // Ace-low straight
-    
     let mut straight_found = None;
 
-    for ns in straights {
+    for ns in STRAIGHTS.iter() {
         let has_all = ns.iter().all(|i| numbers.contains_key(&i));
 
         if has_all {
@@ -77,13 +152,20 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
     }    
 
     // Flush (used later)
-    let mut suits = HashMap::<_, i32>::new();
+    let mut suits = HashMap::<_, Vec<_>>::new();
 
     for c in all.iter() {
-        *suits.entry(c.suit.clone()).or_default() += 1;
+        suits.entry(c.suit.clone()).or_default().push(*c);
     }
 
-    let flush = suits.iter().any(|(_, &i)| i >= 5);
+    let flush = suits.iter()
+        .map(|(_, i)| i)
+        .find(|&cs| cs.len() >= 5)
+        .cloned()
+        .map(|mut cs| {
+            cs.sort_by_key(|i| i.value());
+            cs
+        });
 
     // FullHouse / ThreeOfAKind
     let three = numbers.iter()
@@ -101,8 +183,8 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
             return Play::FullHouse(*t, i);
         }
 
-        if flush {
-            return Play::Flush;
+        if let Some(f) = flush {
+            return Play::Flush(f[f.len() - 5..].iter().map(|c| c.value()).collect());
         }
 
         let mut kickers = all.iter()
@@ -117,8 +199,8 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
         return Play::ThreeOfAKind(*t, kickers);
     }
 
-    if flush {
-        return Play::Flush;
+    if let Some(f) = flush {
+        return Play::Flush(f[f.len() - 5..].iter().map(|c| c.value()).collect());
     }
 
     if let Some(s) = straight_found {
