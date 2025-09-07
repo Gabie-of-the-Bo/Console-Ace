@@ -131,13 +131,11 @@ impl Game {
         write_str(&"▀".repeat(name.len()));
     }
 
-    pub fn draw_player_plays(&self, plays: &Vec<Play>) {
-        let winner = plays.iter().enumerate().max_by_key(|(_, i)| *i).unwrap().0;
-
+    pub fn draw_player_plays(&self, plays: &Vec<Play>, winner: usize) {
         let play_str = |i: usize| {
             if i == winner {
                 format!(">>> {} <<<", plays[i].name())
-                
+
             } else {
                 plays[i].name()
             }
@@ -326,14 +324,17 @@ impl Game {
                                 }
 
                             } else {
-                                // TODO: win bets
+                                // Calculate winner and draw plays
                                 let plays = self.players.iter().map(|p| analyze_play(&p.hand, &self.board)).collect::<Vec<_>>();
+                                let winner = plays.iter().enumerate().max_by_key(|(_, i)| *i).unwrap().0;
 
-                                self.draw_player_plays(&plays);
+                                self.draw_player_plays(&plays, winner);
 
-                                self.players.iter_mut().for_each(Player::take_bet);
-                                self.draw_player_bets();
-                                self.draw_player_chips();
+                                // Take chips
+                                let earnings = self.players.iter().map(|i| i.bet).sum::<usize>();
+                                
+                                self.players.iter_mut().for_each(Player::lose_bet);
+                                self.players[winner].win(earnings);
 
                                 // Reset draw cache and proceed
                                 self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);

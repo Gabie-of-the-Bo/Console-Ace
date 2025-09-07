@@ -24,9 +24,8 @@ impl Player {
         self.bet += chips;
     }
 
-    pub fn take_bet(&mut self) {
-        self.money += self.bet;
-        self.bet = 0;
+    pub fn win(&mut self, chips: usize) {
+        self.money += chips;
     }
 
     pub fn lose_bet(&mut self) {
