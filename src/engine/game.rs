@@ -32,7 +32,7 @@ impl Game {
     }
 
     pub fn startup(&mut self) {
-        resize(40, 125);
+        resize(41, 125);
 
         enable_raw_mode().expect("Unable to start raw mode");
         enter_alternate_screen();
@@ -88,8 +88,8 @@ impl Game {
 
     }
 
-    pub fn draw_single_player_play(&self, col: usize, row: usize, play: &Play) {
-        let name = format!(" {} ", play.name());
+    pub fn draw_single_player_play(&self, col: usize, row: usize, play: String) {
+        let name = format!(" {} ", play);
         let h = name.len() / 2;
 
         set_color(DBLUE, Color::White);
@@ -103,8 +103,8 @@ impl Game {
         write_str(&"▀".repeat(name.len()));
     }
 
-    pub fn draw_single_player_play_left(&self, col: usize, row: usize, play: &Play) {
-        let name = format!(" {} ", play.name());
+    pub fn draw_single_player_play_left(&self, col: usize, row: usize, play: String) {
+        let name = format!(" {} ", play);
 
         set_color(DBLUE, Color::White);
         move_cursor(row, col);
@@ -117,8 +117,8 @@ impl Game {
         write_str(&"▀".repeat(name.len()));
     }
 
-    pub fn draw_single_player_play_right(&self, col: usize, row: usize, play: &Play) {
-        let name = format!(" {} ", play.name());
+    pub fn draw_single_player_play_right(&self, col: usize, row: usize, play: String) {
+        let name = format!(" {} ", play);
 
         set_color(DBLUE, Color::White);
         move_cursor(row, col - name.len());
@@ -132,10 +132,21 @@ impl Game {
     }
 
     pub fn draw_player_plays(&self, plays: &Vec<Play>) {
-        self.draw_single_player_play(62, 26, &plays[0]);
-        self.draw_single_player_play_left(5, 8, &plays[1]);
-        self.draw_single_player_play(62, 13, &plays[2]);
-        self.draw_single_player_play_right(120, 30, &plays[3]);
+        let winner = plays.iter().enumerate().max_by_key(|(_, i)| *i).unwrap().0;
+
+        let play_str = |i: usize| {
+            if i == winner {
+                format!(">>> {} <<<", plays[i].name())
+                
+            } else {
+                plays[i].name()
+            }
+        }; 
+
+        self.draw_single_player_play(62, 27, play_str(0));
+        self.draw_single_player_play_left(5, 9, play_str(1));
+        self.draw_single_player_play(62, 13, play_str(2));
+        self.draw_single_player_play_right(120, 31, play_str(3));
     }
 
     pub fn draw_single_player_chips(&self, col: usize, row: usize, player: &Player) {
@@ -153,10 +164,10 @@ impl Game {
     }
 
     pub fn draw_player_chips(&self) {
-        self.draw_single_player_chips(79, 36, &self.players[0]);
-        self.draw_single_player_chips(5, 30, &self.players[1]);
+        self.draw_single_player_chips(79, 37, &self.players[0]);
+        self.draw_single_player_chips(5, 31, &self.players[1]);
         self.draw_single_player_chips(35, 3, &self.players[2]);
-        self.draw_single_player_chips(109, 8, &self.players[3]);
+        self.draw_single_player_chips(109, 9, &self.players[3]);
     }
 
     pub fn draw_single_player_bet(&self, col: usize, row: usize, player: &Player) {
@@ -174,10 +185,10 @@ impl Game {
     }
 
     pub fn draw_player_bets(&self) {
-        self.draw_single_player_bet(79, 33, &self.players[0]);
-        self.draw_single_player_bet(5, 33, &self.players[1]);
+        self.draw_single_player_bet(79, 34, &self.players[0]);
+        self.draw_single_player_bet(5, 34, &self.players[1]);
         self.draw_single_player_bet(35, 6, &self.players[2]);
-        self.draw_single_player_bet(109, 5, &self.players[3]);
+        self.draw_single_player_bet(109, 6, &self.players[3]);
     }
 
     pub fn draw_dealer_chip_at(&self, row: usize, col: usize) {
@@ -206,32 +217,32 @@ impl Game {
 
     pub fn draw_dealer_chip(&self) {
         set_color(BAIZE, Color::Black);
-        clear_section(29, 43, 31, 46);
-        clear_section(7, 4, 9, 7);
+        clear_section(30, 43, 32, 46);
+        clear_section(8, 4, 10, 7);
         clear_section(2, 77, 4, 80);
-        clear_section(29, 108, 31, 111);
+        clear_section(30, 108, 32, 111);
 
         match self.dealer {
-            0 => self.draw_dealer_chip_at(30, 44),
-            1 => self.draw_dealer_chip_at(8, 5),
+            0 => self.draw_dealer_chip_at(31, 44),
+            1 => self.draw_dealer_chip_at(9, 5),
             2 => self.draw_dealer_chip_at(3, 78),
-            3 => self.draw_dealer_chip_at(30, 109),
+            3 => self.draw_dealer_chip_at(31, 109),
             _ => unreachable!()
         }
     }
 
     pub fn draw_turn_chip(&self, turn: usize) {
         set_color(BAIZE, Color::Black);
-        clear_section(32, 43, 34, 46);
-        clear_section(7, 9, 9, 12);
+        clear_section(33, 43, 35, 46);
+        clear_section(8, 9, 10, 12);
         clear_section(2, 82, 4, 85);
-        clear_section(29, 113, 31, 116);
+        clear_section(30, 113, 32, 116);
 
         match turn {
-            0 => self.draw_turn_chip_at(33, 44),
-            1 => self.draw_turn_chip_at(8, 10),
+            0 => self.draw_turn_chip_at(34, 44),
+            1 => self.draw_turn_chip_at(9, 10),
             2 => self.draw_turn_chip_at(3, 83),
-            3 => self.draw_turn_chip_at(30, 114),
+            3 => self.draw_turn_chip_at(31, 114),
             _ => unreachable!()
         }
     }
@@ -379,12 +390,12 @@ impl Game {
 
                 // Center cards
                 for (i, card) in self.board.iter_mut().enumerate() {
-                    card.draw(27 + i * 15, 15, i >= num_flipped);
+                    card.draw(27 + i * 15, 16, i >= num_flipped);
                 }
 
                 // Players
                 for (i, card) in self.players[3].hand.iter_mut().enumerate() {
-                    card.draw(109, 10 + i * 10, true);
+                    card.draw(109, 11 + i * 10, true);
                 }
 
                 for (i, card) in self.players[2].hand.iter_mut().enumerate() {
@@ -392,17 +403,17 @@ impl Game {
                 }
 
                 for (i, card) in self.players[1].hand.iter_mut().enumerate() {
-                    card.draw(5, 10 + i * 10, true);
+                    card.draw(5, 11 + i * 10, true);
                 }
 
                 for (i, card) in self.players[0].hand.iter_mut().enumerate() {
-                    card.draw(25 + 24 + i * 16, 29, !sb || !bb);
+                    card.draw(25 + 24 + i * 16, 30, !sb || !bb);
                 }
             },
 
             GameState::Resolving => {
                 for (i, card) in self.players[3].hand.iter_mut().enumerate() {
-                    card.draw(109, 10 + i * 10, false);
+                    card.draw(109, 11 + i * 10, false);
                 }
 
                 for (i, card) in self.players[2].hand.iter_mut().enumerate() {
@@ -410,11 +421,11 @@ impl Game {
                 }
 
                 for (i, card) in self.players[1].hand.iter_mut().enumerate() {
-                    card.draw(5, 10 + i * 10, false);
+                    card.draw(5, 11 + i * 10, false);
                 }
 
                 for (i, card) in self.players[0].hand.iter_mut().enumerate() {
-                    card.draw(25 + 24 + i * 16, 29, false);
+                    card.draw(25 + 24 + i * 16, 30, false);
                 }
             },
         }
