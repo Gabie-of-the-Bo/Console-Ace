@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crossterm::event::KeyCode;
 
-use crate::{actor::action::Action, engine::{controls::Controls, timer::Timer}};
+use crate::{actor::action::Action, engine::{controls::Controls, player::BIG_BLIND, timer::Timer}};
 
 pub trait PokerActor {
     fn start_turn(&mut self);
@@ -67,7 +67,7 @@ impl PokerActor for HumanActor {
     }
 
     fn done(&mut self, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
-        let min_raise = 5.max(last_raise);
+        let min_raise = BIG_BLIND.max(last_raise);
 
         if controls.is_pressed(KeyCode::Char('f')) {
             self.selected_action = Some(Action::Fold);

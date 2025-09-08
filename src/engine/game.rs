@@ -400,7 +400,11 @@ impl Game {
                             self.draw_info_at(
                                 31, 23, 
                                 vec!(
-                                    format!("[C]   Check {}", self.current_bet),
+                                    if self.players[turn].bet == self.current_bet {
+                                        format!("[C]   Check")
+                                    } else {
+                                        format!("[C]   Call {}", self.current_bet)
+                                    },
                                     format!("[R]   Raise {}", min_raise),
                                     format!("[D]   Raise {}", min_raise * 2),
                                     format!("[T]   Raise {}", min_raise * 3),
