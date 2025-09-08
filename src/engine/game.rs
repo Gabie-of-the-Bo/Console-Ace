@@ -12,6 +12,7 @@ pub struct Game {
     pub board: Vec<Card>,
     pub dealer: usize,
     pub current_bet: usize,
+    pub last_raise: usize
 }
 
 impl Game {
@@ -31,6 +32,7 @@ impl Game {
             board: vec!(),
             dealer: 0,
             current_bet: 0,
+            last_raise: 0
         }
     }
 
@@ -267,9 +269,12 @@ impl Game {
 
     pub fn perform_action(&mut self, action: Action, turn: usize) {
         match action {
-            Action::Call => self.bet(turn, self.current_bet - self.players[turn].bet),
-            Action::Raise(c) => self.bet(turn, (self.current_bet + c) - self.players[turn].bet),
             Action::Fold => todo!(),
+            Action::Call => self.bet(turn, self.current_bet - self.players[turn].bet),
+            Action::Raise(c) => {
+                self.last_raise = c;
+                self.bet(turn, (self.current_bet + c) - self.players[turn].bet)
+            },
         }
     }
 
@@ -302,13 +307,13 @@ impl Game {
                 self.draw_dealer_chip();
             },
 
-            GameState::Round(num_flipped, turn, sb, bb, mut initial) => {
+            GameState::Round(num_flipped, turn, sb, bb, mut initial) => {                
                 if !self.players[turn].actor.turn_started() {
                     self.players[turn].actor.start_turn();
                 }
 
                 if !sb && !bb { // Small blind
-                    if self.players[turn].actor.done(&mut self.controls) {
+                    if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
                         self.perform_action(Action::Raise(SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
@@ -316,18 +321,19 @@ impl Game {
                     }
 
                 } else if sb && !bb { // Big blind
-                    if self.players[turn].actor.done(&mut self.controls) {
+                    if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
                         self.perform_action(Action::Raise(BIG_BLIND - SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
                         self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, true, true);
                         self.players[0].hand.iter_mut().for_each(Card::reset_draw_cache);
+                        self.last_raise = BIG_BLIND;
                     }                    
 
                 } else {
                     // Normal turn
                     if !initial || self.players[turn].bet < self.current_bet {
-                        if self.players[turn].actor.done(&mut self.controls) {
+                        if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
                             let action = self.players[turn].actor.get_action();
 
                             if matches!(action, Action::Raise(_)) {
@@ -352,8 +358,6 @@ impl Game {
                     // Pass stage
                     if turn == self.dealer && balanced_bet {
                         if num_flipped < 5 {
-                            self.board[num_flipped].reset_draw_cache();
-
                             // Pre-flop
                             if num_flipped == 0 {
                                 self.board[0].reset_draw_cache();
@@ -362,8 +366,11 @@ impl Game {
                                 self.state = GameState::Round(3, (turn + 1) % 4, true, true, false);
 
                             } else {
+                                self.board[num_flipped].reset_draw_cache();
                                 self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, true, true, false);
                             }
+                            
+                            self.last_raise = 0;
 
                         } else {
                             // Calculate winner and draw plays

@@ -7,7 +7,7 @@ use crate::{actor::action::Action, engine::{controls::Controls, timer::Timer}};
 pub trait PokerActor {
     fn start_turn(&mut self);
     fn turn_started(&self) -> bool;
-    fn done(&mut self, controls: &mut Controls) -> bool;
+    fn done(&mut self, game: &mut Controls, last_raise: usize, pot: usize) -> bool;
     fn get_action(&mut self) -> Action;
     fn end_turn(&mut self);
 }
@@ -33,7 +33,7 @@ impl PokerActor for SimpleActor {
         self.started
     }
 
-    fn done(&mut self, _controls: &mut Controls) -> bool {
+    fn done(&mut self, _controls: &mut Controls, _last_raise: usize, _pot: usize) -> bool {
         self.timer.done()
     }
 
@@ -66,15 +66,36 @@ impl PokerActor for HumanActor {
         self.started
     }
 
-    fn done(&mut self, controls: &mut Controls) -> bool {
-        if controls.is_pressed(KeyCode::Enter) || controls.is_pressed(KeyCode::Char('c')) {
+    fn done(&mut self, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
+        if controls.is_pressed(KeyCode::Char('f')) {
+            self.selected_action = Some(Action::Fold);
+        
+        } else if controls.is_pressed(KeyCode::Char('c')) {
             self.selected_action = Some(Action::Call);
         
         } else if controls.is_pressed(KeyCode::Char('r')) {
-            self.selected_action = Some(Action::Raise(5));
+            if last_raise == 0 {
+                self.selected_action = Some(Action::Raise(5));
+
+            } else {
+                self.selected_action = Some(Action::Raise(last_raise));
+            }
         
-        } else if controls.is_pressed(KeyCode::Char('f')) {
-            self.selected_action = Some(Action::Fold);
+        } else if controls.is_pressed(KeyCode::Char('p')) {
+            if controls.is_pressed(KeyCode::Char('d')) {
+                self.selected_action = Some(Action::Raise(pot));
+            
+            } else if controls.is_pressed(KeyCode::Char('t')) {
+                self.selected_action = Some(Action::Raise(pot * 2));
+            }
+
+        } else {
+            if controls.is_pressed(KeyCode::Char('d')) {
+                self.selected_action = Some(Action::Raise(last_raise * 2));
+            
+            } else if controls.is_pressed(KeyCode::Char('t')) {
+                self.selected_action = Some(Action::Raise(last_raise * 3));
+            }
         }
 
         self.selected_action.is_some()
