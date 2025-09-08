@@ -296,6 +296,23 @@ impl Game {
         write_str(&msg);
     }
 
+    pub fn draw_info_at(&self, row: usize, col: usize, lines: Vec<String>) {
+        let width = lines.iter().map(String::len).max().unwrap();
+
+        set_color(DBLUE, Color::White);
+
+        for (i, line) in lines.iter().enumerate() {
+            move_cursor(row + i, col);
+            write_str(&format!(" {}{} ", line, " ".repeat(width - line.len())));
+        }
+
+        set_color(BAIZE, DBLUE);
+        move_cursor(row - 1, col);
+        write_str(&"▄".repeat(width + 2));
+        move_cursor(row + lines.len(), col);
+        write_str(&"▀".repeat(width + 2));
+    }
+
     pub fn next_turn(&mut self, turn: usize) -> usize {
         let mut res = (turn + 1) % 4;
 
@@ -377,6 +394,23 @@ impl Game {
                 } else {
                     // Normal turn
                     if !self.players[turn].folded && (!initial || self.players[turn].bet < self.current_bet) {
+                        if turn == 0 {
+                            let min_raise = BIG_BLIND.max(self.last_raise);
+
+                            self.draw_info_at(
+                                31, 23, 
+                                vec!(
+                                    format!("[C]   Check {}", self.current_bet),
+                                    format!("[R]   Raise {}", min_raise),
+                                    format!("[D]   Raise {}", min_raise * 2),
+                                    format!("[T]   Raise {}", min_raise * 3),
+                                    format!("[P+D] Raise {}", self.current_bet),
+                                    format!("[P+T] Raise {}", self.current_bet * 2),
+                                    format!("[F]   Fold")
+                                )
+                            );
+                        }
+
                         if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
                             let action = self.players[turn].actor.get_action();
 
@@ -387,6 +421,10 @@ impl Game {
                             self.perform_action(action, turn);
                             
                             self.players[turn].actor.end_turn();
+
+                            if turn == 0 {
+                                clear_section(30, 23, 41, 40);
+                            }
     
                         } else {
                             return false; // Wait for the actor to be done

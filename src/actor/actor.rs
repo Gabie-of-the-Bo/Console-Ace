@@ -67,6 +67,8 @@ impl PokerActor for HumanActor {
     }
 
     fn done(&mut self, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
+        let min_raise = 5.max(last_raise);
+
         if controls.is_pressed(KeyCode::Char('f')) {
             self.selected_action = Some(Action::Fold);
         
@@ -74,12 +76,7 @@ impl PokerActor for HumanActor {
             self.selected_action = Some(Action::Call);
         
         } else if controls.is_pressed(KeyCode::Char('r')) {
-            if last_raise == 0 {
-                self.selected_action = Some(Action::Raise(5));
-
-            } else {
-                self.selected_action = Some(Action::Raise(last_raise));
-            }
+            self.selected_action = Some(Action::Raise(min_raise));
         
         } else if controls.is_pressed(KeyCode::Char('p')) {
             if controls.is_pressed(KeyCode::Char('d')) {
@@ -91,10 +88,10 @@ impl PokerActor for HumanActor {
 
         } else {
             if controls.is_pressed(KeyCode::Char('d')) {
-                self.selected_action = Some(Action::Raise(last_raise * 2));
+                self.selected_action = Some(Action::Raise(min_raise * 2));
             
             } else if controls.is_pressed(KeyCode::Char('t')) {
-                self.selected_action = Some(Action::Raise(last_raise * 3));
+                self.selected_action = Some(Action::Raise(min_raise * 3));
             }
         }
 
