@@ -7,7 +7,7 @@ use crate::{actor::action::Action, engine::{controls::Controls, player::BIG_BLIN
 pub trait PokerActor {
     fn start_turn(&mut self);
     fn turn_started(&self) -> bool;
-    fn done(&mut self, game: &mut Controls, last_raise: usize, pot: usize) -> bool;
+    fn done(&mut self, forced: bool, game: &mut Controls, last_raise: usize, pot: usize) -> bool;
     fn get_action(&mut self) -> Action;
     fn end_turn(&mut self);
 }
@@ -33,7 +33,7 @@ impl PokerActor for SimpleActor {
         self.started
     }
 
-    fn done(&mut self, _controls: &mut Controls, _last_raise: usize, _pot: usize) -> bool {
+    fn done(&mut self, _forced: bool, _controls: &mut Controls, _last_raise: usize, _pot: usize) -> bool {
         self.timer.done()
     }
 
@@ -66,7 +66,11 @@ impl PokerActor for HumanActor {
         self.started
     }
 
-    fn done(&mut self, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
+    fn done(&mut self, forced: bool, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
+        if forced {
+            return true;
+        }
+
         let min_raise = BIG_BLIND.max(last_raise);
 
         if controls.is_pressed(KeyCode::Char('f')) {

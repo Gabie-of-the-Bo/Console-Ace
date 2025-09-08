@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
@@ -136,9 +136,9 @@ impl Game {
         write_str(&"▀".repeat(name.len()));
     }
 
-    pub fn draw_player_plays(&self, plays: &Vec<Play>, winner: usize) {
+    pub fn draw_player_plays(&self, plays: &Vec<Play>, winners: &HashSet<usize>) {
         let play_str = |i: usize| {
-            if i == winner {
+            if winners.contains(&i) {
                 format!(">>> {} <<<", plays[i].name())
 
             } else {
@@ -334,6 +334,83 @@ impl Game {
         }
     }
 
+    pub fn solve_pots(&mut self, plays: &Vec<Play>) -> HashSet<usize> {
+        // Players that won something
+        let mut winners = HashSet::new();
+
+        // Initial contributions
+        let mut contributions = self.players.iter().map(|p| p.bet).collect::<Vec<_>>();
+        let mut total = contributions.iter().sum::<usize>();
+        let valid_plays = plays.iter()
+            .enumerate()
+            .filter(|(i, _)| !self.players[*i].folded)
+            .filter(|(i, _)| !self.players[*i].lost())
+            .collect::<Vec<_>>();
+
+        // Reset player bets
+        self.players.iter_mut().for_each(Player::lose_bet);
+
+        // Pot winning algorithm
+        while total > 0 {
+            // Calculate layers
+            let mut layers = contributions.clone();
+            layers.sort();
+            layers.dedup();
+
+            // Compute incremental tiers
+            for i in (1..layers.len()).rev() {
+                layers[i] -= layers[i - 1]; 
+            }
+
+            // Solve layers from lowest amount to highest
+            for layer in layers {
+                // Get players of the layer (non-folded and active)
+                let mut layer_players = valid_plays.iter()
+                    .filter(|(p, _)| contributions[*p] >= layer)
+                    .collect::<Vec<_>>();
+
+                layer_players.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+
+                // Get tied best players of the layer
+                let (_, best_play) = layer_players.last().unwrap();
+                let tied_best_players = layer_players.iter()
+                    .filter(|(_, p)| p == best_play)
+                    .map(|i| i.0)
+                    .collect::<Vec<_>>();
+
+                // Subtract layer value from contributions to get remaining contributions
+                let mut layer_amount = 0;
+
+                for c in contributions.iter_mut() {
+                    let amount = layer.min(*c);
+                    *c -= amount;
+                    layer_amount += amount;
+                }
+
+                total -= layer_amount;
+
+                // Distribute the amount got from this layer
+                let base_amount = layer_amount / tied_best_players.len();
+                let mut remainder = layer_amount % tied_best_players.len();
+
+                for p in tied_best_players.iter() {
+                    let won_amount = base_amount + 1.min(remainder);
+                    self.players[*p].win(won_amount);
+
+                    if remainder > 0 {
+                        remainder -= 1; // Remainder is distributed in seating order
+                    }
+
+                    if won_amount > 0 {
+                        winners.insert(*p);
+                    }
+                }
+            }
+        }
+
+        winners
+    }
+
     pub fn update(&mut self) -> bool {
         match self.state {
             GameState::MainMenu => todo!(),
@@ -374,7 +451,7 @@ impl Game {
                 }
 
                 if !sb && !bb { // Small blind
-                    if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
+                    if self.players[turn].actor.done(true, &mut self.controls, self.last_raise, self.current_bet) {
                         self.perform_action(Action::Raise(SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
@@ -382,7 +459,7 @@ impl Game {
                     }
 
                 } else if sb && !bb { // Big blind
-                    if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
+                    if self.players[turn].actor.done(true, &mut self.controls, self.last_raise, self.current_bet) {
                         self.perform_action(Action::Raise(BIG_BLIND - SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
@@ -416,7 +493,7 @@ impl Game {
                             );
                         }
 
-                        if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
+                        if self.players[turn].actor.done(false, &mut self.controls, self.last_raise, self.current_bet) {
                             let action = self.players[turn].actor.get_action();
 
                             if matches!(action, Action::Raise(_)) {
@@ -464,21 +541,13 @@ impl Game {
 
                         } else {
                             // Calculate winner and draw plays
-                            let plays = self.players.iter().map(|p| analyze_play(&p.hand, &self.board)).collect::<Vec<_>>();
-                            let winner = plays.iter()
-                                .enumerate()
-                                .filter(|(i, _)| !self.players[*i].folded)
-                                .filter(|(i, _)| !self.players[*i].lost())
-                                .max_by_key(|(_, i)| *i)
-                                .unwrap().0;
+                            let plays = self.players.iter()
+                                .map(|p| analyze_play(&p.hand, &self.board))
+                                .collect();
 
-                            self.draw_player_plays(&plays, winner);
+                            let winners = self.solve_pots(&plays);
 
-                            // Take chips
-                            let earnings = self.players.iter().map(|i| i.bet).sum::<usize>();
-                            
-                            self.players.iter_mut().for_each(Player::lose_bet);
-                            self.players[winner].win(earnings);
+                            self.draw_player_plays(&plays, &winners);
 
                             // Reset draw cache and proceed
                             self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
