@@ -19,11 +19,16 @@ pub mod poker {
     pub mod play;
 }
 
+pub mod actor {
+    pub mod action;
+    pub mod actor;
+}
+
 fn main() {
     const TARGET_FPS: u64 = 15;
     let frame_duration: Duration = Duration::from_secs_f64(1.0 / TARGET_FPS as f64);
     
-    let mut game = Game::new(4);
+    let mut game = Game::new();
 
     game.startup();
 

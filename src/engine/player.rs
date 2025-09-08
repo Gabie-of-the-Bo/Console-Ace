@@ -1,4 +1,4 @@
-use crate::poker::card::Card;
+use crate::{actor::actor::PokerActor, poker::card::Card};
 
 pub const SMALL_BLIND: usize = 2;
 pub const BIG_BLIND: usize = 5;
@@ -7,12 +7,13 @@ pub struct Player {
     pub name: String,
     pub money: usize,
     pub bet: usize,
-    pub hand: Vec<Card>
+    pub hand: Vec<Card>,
+    pub actor: Box<dyn PokerActor>
 }
 
 impl Player {
-    pub fn new(name: String, money: usize) -> Self {
-        Player { name, money, bet: 0, hand: vec!() }
+    pub fn new(name: String, money: usize, actor: Box<dyn PokerActor>) -> Self {
+        Player { name, money, bet: 0, hand: vec!(), actor }
     }
 
     pub fn give_card(&mut self, card: Card) {
