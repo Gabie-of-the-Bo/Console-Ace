@@ -396,6 +396,7 @@ impl Game {
                     if !self.players[turn].folded && (!initial || self.players[turn].bet < self.current_bet) {
                         if turn == 0 {
                             let min_raise = BIG_BLIND.max(self.last_raise);
+                            let raise_bet = if initial { "Raise" } else { "Bet" };
 
                             self.draw_info_at(
                                 31, 23, 
@@ -405,11 +406,11 @@ impl Game {
                                     } else {
                                         format!("[C]   Call {}", self.current_bet)
                                     },
-                                    format!("[R]   Raise {}", min_raise),
-                                    format!("[D]   Raise {}", min_raise * 2),
-                                    format!("[T]   Raise {}", min_raise * 3),
-                                    format!("[P+D] Raise {}", self.current_bet),
-                                    format!("[P+T] Raise {}", self.current_bet * 2),
+                                    format!("[R]   {raise_bet} {}", min_raise),
+                                    format!("[D]   {raise_bet} {}", min_raise * 2),
+                                    format!("[T]   {raise_bet} {}", min_raise * 3),
+                                    format!("[P+D] {raise_bet} {}", self.current_bet),
+                                    format!("[P+T] {raise_bet} {}", self.current_bet * 2),
                                     format!("[F]   Fold")
                                 )
                             );
