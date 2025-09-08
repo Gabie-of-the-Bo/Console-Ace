@@ -146,19 +146,19 @@ impl Game {
             }
         }; 
 
-        if !self.players[0].folded {
+        if !self.players[0].folded && !self.players[0].lost() {
             self.draw_single_player_play(62, 27, play_str(0));
         }
 
-        if !self.players[1].folded {
+        if !self.players[1].folded && !self.players[1].lost() {
             self.draw_single_player_play_left(5, 9, play_str(1));
         }
 
-        if !self.players[2].folded {
+        if !self.players[2].folded && !self.players[2].lost() {
             self.draw_single_player_play(62, 13, play_str(2));
         }
 
-        if !self.players[3].folded {
+        if !self.players[3].folded && !self.players[3].lost() {
             self.draw_single_player_play_right(120, 31, play_str(3));
         }
     }
@@ -179,9 +179,18 @@ impl Game {
 
     pub fn draw_player_chips(&self) {
         self.draw_single_player_chips(79, 37, &self.players[0]);
-        self.draw_single_player_chips(5, 31, &self.players[1]);
-        self.draw_single_player_chips(35, 3, &self.players[2]);
-        self.draw_single_player_chips(109, 9, &self.players[3]);
+
+        if !self.players[1].lost() {
+            self.draw_single_player_chips(5, 31, &self.players[1]);
+        }
+
+        if !self.players[2].lost() {
+            self.draw_single_player_chips(35, 3, &self.players[2]);
+        }
+
+        if !self.players[3].lost() {
+            self.draw_single_player_chips(109, 9, &self.players[3]);
+        }
     }
 
     pub fn draw_single_player_bet(&self, col: usize, row: usize, player: &Player) {
@@ -200,9 +209,18 @@ impl Game {
 
     pub fn draw_player_bets(&self) {
         self.draw_single_player_bet(79, 34, &self.players[0]);
-        self.draw_single_player_bet(5, 34, &self.players[1]);
-        self.draw_single_player_bet(35, 6, &self.players[2]);
-        self.draw_single_player_bet(109, 6, &self.players[3]);
+
+        if !self.players[1].lost() {
+            self.draw_single_player_bet(5, 34, &self.players[1]);
+        }
+
+        if !self.players[2].lost() {
+            self.draw_single_player_bet(35, 6, &self.players[2]);
+        }
+
+        if !self.players[3].lost() {
+            self.draw_single_player_bet(109, 6, &self.players[3]);
+        }
     }
 
     pub fn draw_dealer_chip_at(&self, row: usize, col: usize) {
@@ -278,8 +296,14 @@ impl Game {
         write_str(&msg);
     }
 
-    pub fn next_turn(&self, turn: usize) -> usize {
-        (turn + 1) % 4
+    pub fn next_turn(&mut self, turn: usize) -> usize {
+        let mut res = (turn + 1) % 4;
+
+        while self.players[res].lost() {
+            res = (res + 1) % 4;
+        }
+
+        res
     }
 
     pub fn perform_action(&mut self, action: Action, turn: usize) {
@@ -305,8 +329,10 @@ impl Game {
                 self.deck.shuffle();
 
                 for player in &mut self.players {
-                    for _ in 0..2 {
-                        player.give_card(self.deck.pop().expect("No more cards"));
+                    if !player.lost() {
+                        for _ in 0..2 {
+                            player.give_card(self.deck.pop().expect("No more cards"));
+                        }
                     }
                 }
 
@@ -314,7 +340,7 @@ impl Game {
                     self.board.push(self.deck.pop().expect("No more cards"));
                 }
 
-                self.state = GameState::Round(0, (self.dealer + 1) % 4, false, false, false);
+                self.state = GameState::Round(0, self.next_turn(self.dealer), false, false, false);
 
                 // Draw green baize
                 set_color(BAIZE, Color::Black);
@@ -371,7 +397,10 @@ impl Game {
                         self.players[turn].actor.end_turn();
                     }
 
-                    let balanced_bet = self.players.iter().filter(|p| !p.folded).all(|i| i.bet == self.current_bet);
+                    let balanced_bet = self.players.iter()
+                        .filter(|p| !p.folded)
+                        .filter(|p| !p.lost())
+                        .all(|i| i.bet == self.current_bet);
 
                     // Pass stage
                     if turn == self.dealer && balanced_bet {
@@ -396,6 +425,7 @@ impl Game {
                             let winner = plays.iter()
                                 .enumerate()
                                 .filter(|(i, _)| !self.players[*i].folded)
+                                .filter(|(i, _)| !self.players[*i].lost())
                                 .max_by_key(|(_, i)| *i)
                                 .unwrap().0;
 

@@ -41,4 +41,8 @@ impl Player {
     pub fn unfold(&mut self) {
         self.folded = false;
     }
+
+    pub fn lost(&self) -> bool {
+        self.money == 0 && self.bet == 0
+    }
 }
