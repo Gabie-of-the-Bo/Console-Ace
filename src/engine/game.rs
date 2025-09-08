@@ -146,10 +146,21 @@ impl Game {
             }
         }; 
 
-        self.draw_single_player_play(62, 27, play_str(0));
-        self.draw_single_player_play_left(5, 9, play_str(1));
-        self.draw_single_player_play(62, 13, play_str(2));
-        self.draw_single_player_play_right(120, 31, play_str(3));
+        if !self.players[0].folded {
+            self.draw_single_player_play(62, 27, play_str(0));
+        }
+
+        if !self.players[1].folded {
+            self.draw_single_player_play_left(5, 9, play_str(1));
+        }
+
+        if !self.players[2].folded {
+            self.draw_single_player_play(62, 13, play_str(2));
+        }
+
+        if !self.players[3].folded {
+            self.draw_single_player_play_right(120, 31, play_str(3));
+        }
     }
 
     pub fn draw_single_player_chips(&self, col: usize, row: usize, player: &Player) {
@@ -267,9 +278,13 @@ impl Game {
         write_str(&msg);
     }
 
+    pub fn next_turn(&self, turn: usize) -> usize {
+        (turn + 1) % 4
+    }
+
     pub fn perform_action(&mut self, action: Action, turn: usize) {
         match action {
-            Action::Fold => todo!(),
+            Action::Fold => self.players[turn].fold(),
             Action::Call => self.bet(turn, self.current_bet - self.players[turn].bet),
             Action::Raise(c) => {
                 self.last_raise = c;
@@ -283,6 +298,9 @@ impl Game {
             GameState::MainMenu => todo!(),
             
             GameState::Dealing => {
+                // Prepare players
+                self.players.iter_mut().for_each(Player::unfold);
+
                 // Prepare cards
                 self.deck.shuffle();
 
@@ -317,7 +335,7 @@ impl Game {
                         self.perform_action(Action::Raise(SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
-                        self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, bb, true);
+                        self.state = GameState::Round(num_flipped, self.next_turn(turn), true, bb, true);
                     }
 
                 } else if sb && !bb { // Big blind
@@ -325,14 +343,14 @@ impl Game {
                         self.perform_action(Action::Raise(BIG_BLIND - SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
-                        self.state = GameState::Round(num_flipped, (turn + 1) % 4, true, true, true);
+                        self.state = GameState::Round(num_flipped, self.next_turn(turn), true, true, true);
                         self.players[0].hand.iter_mut().for_each(Card::reset_draw_cache);
                         self.last_raise = BIG_BLIND;
                     }                    
 
                 } else {
                     // Normal turn
-                    if !initial || self.players[turn].bet < self.current_bet {
+                    if !self.players[turn].folded && (!initial || self.players[turn].bet < self.current_bet) {
                         if self.players[turn].actor.done(&mut self.controls, self.last_raise, self.current_bet) {
                             let action = self.players[turn].actor.get_action();
 
@@ -353,7 +371,7 @@ impl Game {
                         self.players[turn].actor.end_turn();
                     }
 
-                    let balanced_bet = self.players.iter().all(|i| i.bet == self.current_bet);
+                    let balanced_bet = self.players.iter().filter(|p| !p.folded).all(|i| i.bet == self.current_bet);
 
                     // Pass stage
                     if turn == self.dealer && balanced_bet {
@@ -363,11 +381,11 @@ impl Game {
                                 self.board[0].reset_draw_cache();
                                 self.board[1].reset_draw_cache();
                                 self.board[2].reset_draw_cache();
-                                self.state = GameState::Round(3, (turn + 1) % 4, true, true, false);
+                                self.state = GameState::Round(3, self.next_turn(turn), true, true, false);
 
                             } else {
                                 self.board[num_flipped].reset_draw_cache();
-                                self.state = GameState::Round(num_flipped + 1, (self.dealer + 1) % 4, true, true, false);
+                                self.state = GameState::Round(num_flipped + 1, self.next_turn(self.dealer), true, true, false);
                             }
                             
                             self.last_raise = 0;
@@ -375,7 +393,11 @@ impl Game {
                         } else {
                             // Calculate winner and draw plays
                             let plays = self.players.iter().map(|p| analyze_play(&p.hand, &self.board)).collect::<Vec<_>>();
-                            let winner = plays.iter().enumerate().max_by_key(|(_, i)| *i).unwrap().0;
+                            let winner = plays.iter()
+                                .enumerate()
+                                .filter(|(i, _)| !self.players[*i].folded)
+                                .max_by_key(|(_, i)| *i)
+                                .unwrap().0;
 
                             self.draw_player_plays(&plays, winner);
 
@@ -391,7 +413,7 @@ impl Game {
                         }
 
                     } else {
-                        self.state = GameState::Round(num_flipped, (turn + 1) % 4, sb, bb, initial);
+                        self.state = GameState::Round(num_flipped, self.next_turn(turn), sb, bb, initial);
                     }
                 }
             },
