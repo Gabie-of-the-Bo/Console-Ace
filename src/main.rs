@@ -23,6 +23,7 @@ pub mod poker {
 pub mod actor {
     pub mod action;
     pub mod actor;
+    pub mod human;
 }
 
 fn main() {

@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{actor::{action::Action, actor::{HumanActor, SimpleActor}}, engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
+use crate::{actor::{action::Action, actor::SimpleActor, human::HumanActor}, engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
 
 pub struct Game {
     pub controls: Controls,
