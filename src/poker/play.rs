@@ -1,8 +1,10 @@
 use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
+use itertools::Itertools;
 use lazy_static::lazy_static;
+use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
-use crate::poker::card::Card;
+use crate::poker::{card::Card, deck::Deck};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Play {
@@ -122,7 +124,7 @@ fn valid_straights() -> Vec<Vec<usize>> {
     straights
 }
 
-pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
+pub fn analyze_play(hand: &[Card], community: &[Card]) -> Play {
     let mut all = hand.iter().chain(community).collect::<Vec<_>>();
     all.sort_by_key(|c| c.value());
 
@@ -269,4 +271,27 @@ pub fn analyze_play(hand: &Vec<Card>, community: &Vec<Card>) -> Play {
 
     // Return highest card
     Play::Highest(all[all.len() - 5..].iter().map(|c| c.value()).collect())
+}
+
+pub fn analyze_play_with_unknowns(hand: &[Card], community: &[Card], unknown: usize) -> Vec<Play> {
+    let all = hand.iter().chain(community).collect::<Vec<_>>();
+    let deck = Deck::new();
+    
+    let available_cards = deck.cards.par_iter()
+        .filter(|a| !all.iter().any(|b| a.suit == b.suit && a.number == b.number))
+        .collect::<Vec<_>>();
+
+    let mut res = available_cards.into_iter()
+        .combinations(unknown)
+        .par_bridge()
+        .map(|cs| {
+            let mut new_community = community.to_vec();
+            new_community.extend(cs.into_iter().cloned());
+            analyze_play(hand, &new_community)
+        })
+        .collect::<Vec<_>>();
+
+    res.sort_unstable();
+
+    res
 }

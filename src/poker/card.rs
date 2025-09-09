@@ -11,6 +11,7 @@ pub enum Suit {
     Hearts, Diamonds, Clubs, Spades
 }
 
+#[derive(Clone)]
 pub struct Card {
     pub suit: Suit,
     pub number: usize,

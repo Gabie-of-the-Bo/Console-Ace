@@ -3,7 +3,7 @@ use rand::{rng, seq::SliceRandom};
 use crate::poker::card::{Card, Suit};
 
 pub struct Deck {
-    cards: Vec<Card>
+    pub cards: Vec<Card>
 }
 
 impl Deck {
