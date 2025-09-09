@@ -313,6 +313,11 @@ impl Game {
         write_str(&"▀".repeat(width + 2));
     }
 
+    pub fn clear_info(&self) {
+        set_color(BAIZE, DBLUE);
+        clear_section(30, 23, 41, 40);
+    }
+
     pub fn next_turn(&mut self, turn: usize) -> usize {
         let mut res = (turn + 1) % 4;
 
@@ -505,7 +510,7 @@ impl Game {
                             self.players[turn].actor.end_turn();
 
                             if turn == 0 {
-                                clear_section(30, 23, 41, 40);
+                                self.clear_info();
                             }
     
                         } else {
@@ -513,6 +518,10 @@ impl Game {
                         }
 
                     } else {
+                        if turn == 0 {
+                            self.clear_info();
+                        }
+
                         // End turn inmediately if no action is possible
                         self.players[turn].actor.end_turn();
                     }
