@@ -17,6 +17,7 @@ pub mod poker {
     pub mod card;
     pub mod deck;
     pub mod play;
+    pub mod ai;
 }
 
 pub mod actor {
