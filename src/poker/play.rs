@@ -1,10 +1,8 @@
 use std::{cmp::Ordering, collections::{HashMap, HashSet}};
 
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use rayon::iter::{IntoParallelRefIterator, ParallelBridge, ParallelIterator};
 
-use crate::poker::{card::Card, deck::Deck};
+use crate::poker::card::Card;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Play {

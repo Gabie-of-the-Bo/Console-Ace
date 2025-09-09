@@ -591,7 +591,7 @@ impl Game {
                     self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
 
                     self.state = GameState::Collecting;
-                    self.dealer = (self.dealer + 1) % 4;
+                    self.dealer = self.next_turn(self.dealer);
                     self.current_bet = 0;
                 }
             },
