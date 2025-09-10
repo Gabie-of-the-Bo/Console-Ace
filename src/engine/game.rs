@@ -341,9 +341,10 @@ impl Game {
 
             Action::Raise(c) => {
                 let call_amount = self.current_bet - self.players[turn].bet;
+                let player_money = self.players[turn].money;
 
                 self.last_raise = c;
-                self.bet(turn, call_amount + c);
+                self.bet(turn, player_money.min(call_amount + c));
             },
         }
     }
