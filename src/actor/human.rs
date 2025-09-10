@@ -26,8 +26,11 @@ impl PokerActor for HumanActor {
         if forced {
             return true;
         }
-
-        let min_raise = BIG_BLIND.max(info.last_raise);
+        
+        let player_money = info.players[&info.player].0;
+        let call_amount = info.current_bet - info.players[&info.player].1;
+        let max_raise = player_money - call_amount.min(player_money);
+        let min_raise = BIG_BLIND.max(info.last_raise).min(max_raise);
 
         if controls.is_pressed(KeyCode::Char('f')) {
             self.selected_action = Some(Action::Fold);
@@ -40,18 +43,18 @@ impl PokerActor for HumanActor {
         
         } else if controls.is_pressed(KeyCode::Char('b')) {
             if controls.is_pressed(KeyCode::Char('d')) {
-                self.selected_action = Some(Action::Raise(info.current_bet));
+                self.selected_action = Some(Action::Raise(info.current_bet.min(max_raise)));
             
             } else if controls.is_pressed(KeyCode::Char('t')) {
-                self.selected_action = Some(Action::Raise(info.current_bet * 2));
+                self.selected_action = Some(Action::Raise((info.current_bet * 2).min(max_raise)));
             }
 
         } else {
             if controls.is_pressed(KeyCode::Char('d')) {
-                self.selected_action = Some(Action::Raise(min_raise * 2));
+                self.selected_action = Some(Action::Raise((min_raise * 2).min(max_raise)));
             
             } else if controls.is_pressed(KeyCode::Char('t')) {
-                self.selected_action = Some(Action::Raise(min_raise * 3));
+                self.selected_action = Some(Action::Raise((min_raise * 3).min(max_raise)));
             }
         }
 

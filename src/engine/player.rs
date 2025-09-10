@@ -45,4 +45,8 @@ impl Player {
     pub fn lost(&self) -> bool {
         self.money == 0 && self.bet == 0
     }
+
+    pub fn is_all_in(&self) -> bool {
+        self.money == 0 && self.bet != 0
+    }
 }

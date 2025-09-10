@@ -62,7 +62,8 @@ impl PokerActor for AdHocActor {
                 .sum::<f32>() / num_players as f32;
 
             // Action set
-            let max_raise = info.players[&info.player].0;
+            let player_money = info.players[&info.player].0;
+            let max_raise = player_money - call_amount.min(player_money);
             let min_raise = BIG_BLIND.max(info.last_raise).min(max_raise);
             
             let raise_small = Action::Raise(min_raise);

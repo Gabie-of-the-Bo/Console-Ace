@@ -136,7 +136,7 @@ impl Game {
         write_str(&"▀".repeat(name.len()));
     }
 
-    pub fn draw_player_plays(&self, plays: &Vec<Play>, winners: &HashSet<usize>) {
+    pub fn draw_player_plays(&self, plays: &Vec<Play>, winners: &HashSet<usize>, valid_players: &HashSet<usize>) {
         let play_str = |i: usize| {
             if winners.contains(&i) {
                 format!(">>> {} <<<", plays[i].name())
@@ -146,19 +146,19 @@ impl Game {
             }
         }; 
 
-        if !self.players[0].folded && !self.players[0].lost() {
+        if valid_players.contains(&0) {
             self.draw_single_player_play(62, 27, play_str(0));
         }
 
-        if !self.players[1].folded && !self.players[1].lost() {
+        if valid_players.contains(&1) {
             self.draw_single_player_play_left(5, 9, play_str(1));
         }
 
-        if !self.players[2].folded && !self.players[2].lost() {
+        if valid_players.contains(&2) {
             self.draw_single_player_play(62, 13, play_str(2));
         }
 
-        if !self.players[3].folded && !self.players[3].lost() {
+        if valid_players.contains(&3) {
             self.draw_single_player_play_right(120, 31, play_str(3));
         }
     }
@@ -331,10 +331,19 @@ impl Game {
     pub fn perform_action(&mut self, action: Action, turn: usize) {
         match action {
             Action::Fold => self.players[turn].fold(),
-            Action::Call => self.bet(turn, self.current_bet - self.players[turn].bet),
+            
+            Action::Call => {
+                let call_amount = self.current_bet - self.players[turn].bet;
+                let player_money = self.players[turn].money;
+
+                self.bet(turn, player_money.min(call_amount))
+            },
+
             Action::Raise(c) => {
+                let call_amount = self.current_bet - self.players[turn].bet;
+
                 self.last_raise = c;
-                self.bet(turn, (self.current_bet + c) - self.players[turn].bet)
+                self.bet(turn, call_amount + c);
             },
         }
     }
@@ -488,24 +497,39 @@ impl Game {
 
                 } else {
                     // Normal turn
-                    if !self.players[turn].folded && (!initial || self.players[turn].bet < self.current_bet) {
+                    if !self.players[turn].folded && !self.players[turn].is_all_in() && (!initial || self.players[turn].bet < self.current_bet) {
                         if turn == 0 {
-                            let min_raise = BIG_BLIND.max(self.last_raise);
+                            let player_money = self.players[turn].money;
+                            let call_amount = self.current_bet - self.players[turn].bet;
+                            let max_raise = player_money - call_amount.min(player_money);
+                            let min_raise = BIG_BLIND.max(self.last_raise).min(max_raise);
+
                             let raise_bet = if initial { "Raise" } else { "Bet" };
+                            let raise_all_in = |c: usize| {
+                                if (c + call_amount) >= player_money {
+                                    "All-in".into()
+                                } else {
+                                    format!("{raise_bet} {c}")
+                                }
+                            };
 
                             self.draw_info_at(
                                 31, 23, 
                                 vec!(
                                     if self.players[turn].bet == self.current_bet {
                                         format!("[C]   Check")
-                                    } else {
+                                    
+                                    } else if call_amount == player_money {
                                         format!("[C]   Call {}", self.current_bet)
+
+                                    } else {
+                                        format!("[C]   All-in")
                                     },
-                                    format!("[R]   {raise_bet} {}", min_raise),
-                                    format!("[D]   {raise_bet} {}", min_raise * 2),
-                                    format!("[T]   {raise_bet} {}", min_raise * 3),
-                                    format!("[B+D] {raise_bet} {}", self.current_bet),
-                                    format!("[B+T] {raise_bet} {}", self.current_bet * 2),
+                                    format!("[R]   {}", raise_all_in(min_raise)),
+                                    format!("[D]   {}", raise_all_in((min_raise * 2).min(max_raise))),
+                                    format!("[T]   {}", raise_all_in((min_raise * 3).min(max_raise))),
+                                    format!("[B+D] {}", raise_all_in(self.current_bet.min(max_raise))),
+                                    format!("[B+T] {}", raise_all_in((self.current_bet * 2).min(max_raise))),
                                     format!("[F]   Fold")
                                 )
                             );
@@ -567,9 +591,15 @@ impl Game {
                                 .map(|p| analyze_play(&p.hand, &self.board))
                                 .collect();
 
+                            let valid_players = self.players.iter()
+                                .enumerate()
+                                .filter(|p| !p.1.folded && !p.1.lost())
+                                .map(|p| p.0)
+                                .collect();
+
                             let winners = self.solve_pots(&plays);
 
-                            self.draw_player_plays(&plays, &winners);
+                            self.draw_player_plays(&plays, &winners, &valid_players);
 
                             // Reset draw cache and proceed
                             self.players.iter_mut().flat_map(|p| &mut p.hand).for_each(Card::reset_draw_cache);
