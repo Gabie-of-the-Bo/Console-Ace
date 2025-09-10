@@ -39,10 +39,11 @@ impl PokerActor for AdHocActor {
 
             // Constants
             const P_EPSILON: f32 = 0.02;
+            const BASE_BLUFF_FREQ: f32 = 0.05;
             const CALL_DEFEND_FRAC: f32 = 0.075;
             const GOOD_ADVANTAGE: f32 = 1.5;
-            const GREAT_ADVANTAGE: f32 = 2.0;
-            const FANTASTIC_ADVANTAGE: f32 = 3.0;
+            const GREAT_ADVANTAGE: f32 = 2.5;
+            const FANTASTIC_ADVANTAGE: f32 = 4.0;
 
             // Estimate winning probability as is
             let num_players = info.players.len();
@@ -60,48 +61,67 @@ impl PokerActor for AdHocActor {
                 .map(|i| 1.0 - (i.1.1 - min_bet) as f32 / pot as f32)
                 .sum::<f32>() / num_players as f32;
 
+            // Action set
+            let max_raise = info.players[&info.player].0;
+            let min_raise = BIG_BLIND.max(info.last_raise).min(max_raise);
+            
+            let raise_small = Action::Raise(min_raise);
+            let raise_double = Action::Raise((min_raise * 2).min(max_raise));
+            let raise_triple = Action::Raise((min_raise * 3).min(max_raise));
+            let raise_pot = Action::Raise(info.current_bet.min(max_raise));
+            let raise_double_pot = Action::Raise((info.current_bet * 2).min(max_raise));
+
+            // Bluff modelling (more frequent in small stakes)
+            let bluff_freq = BASE_BLUFF_FREQ * (1.0 - (call_amount as f32 / pot.max(1) as f32));
+
             // If the call is worth it
             if equity > break_even + P_EPSILON {
                 let neutral = 1.0 / info.players.len() as f32;
                 let advantage = (equity / (1.0 - equity)) / (neutral / (1.0 - neutral)); // Odds ratio
 
-                // Action set
-                let max_raise = info.players[&info.player].0;
-                let min_raise = BIG_BLIND.max(info.last_raise).min(max_raise);
-                
-                let raise_small = Action::Raise(min_raise);
-                let raise_double = Action::Raise((min_raise * 2).min(max_raise));
-                let raise_triple = Action::Raise((min_raise * 3).min(max_raise));
-                let raise_pot = Action::Raise(info.current_bet.min(max_raise));
-                let raise_double_pot = Action::Raise((info.current_bet * 2).min(max_raise));
-
                 if advantage > FANTASTIC_ADVANTAGE {
                     self.selected_action = Some(select_weighted(
                         &[raise_triple, raise_pot, raise_double_pot], 
                         &[1.0, advantage, advantage / 2.0]
-                    ))
+                    ));
 
                 } else if advantage > GREAT_ADVANTAGE {
                     self.selected_action = Some(select_weighted(
                         &[raise_double, raise_triple, raise_pot], 
                         &[1.0, advantage, advantage / 2.0]
-                    ))
+                    ));
 
                 } else if advantage > GOOD_ADVANTAGE {
                     self.selected_action = Some(select_weighted(
                         &[raise_small, raise_double], 
                         &[1.0, advantage]
-                    ))
+                    ));
 
                 } else {
-                    self.selected_action = Some(Action::Call)
+                    self.selected_action = Some(Action::Call);
                 }
 
             } else if call_frac < CALL_DEFEND_FRAC || rng.random_bool(mdf.into()) {
-                self.selected_action = Some(Action::Call)
+                if rng.random_bool(bluff_freq.into()) {
+                    self.selected_action = Some(select_weighted(
+                        &[raise_small, raise_double], 
+                        &[1.0, 1.0]
+                    ));
+                    
+                } else {
+                    self.selected_action = Some(Action::Call);
+                }
 
             } else {
-                self.selected_action = Some(Action::Fold)
+                if rng.random_bool(bluff_freq.into()) {
+                    self.selected_action = Some(select_weighted(
+                        &[raise_small, raise_double], 
+                        &[1.0, 1.0]
+                    ));
+                    
+                } else {
+                    self.selected_action = Some(Action::Fold);
+                }
             }
         }
 
