@@ -498,7 +498,9 @@ impl Game {
 
                 } else {
                     // Normal turn
-                    if !self.players[turn].folded && !self.players[turn].is_all_in() && (!initial || self.players[turn].bet < self.current_bet) {
+                    let only_one_left = self.players.iter().map(|i| !i.folded && !i.lost()).count() == 1;
+
+                    if !only_one_left && !self.players[turn].folded && !self.players[turn].is_all_in() && (!initial || self.players[turn].bet < self.current_bet) {
                         if turn == 0 {
                             let player_money = self.players[turn].money;
                             let call_amount = self.current_bet - self.players[turn].bet;
