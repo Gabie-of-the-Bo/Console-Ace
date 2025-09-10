@@ -519,7 +519,7 @@ impl Game {
                                     if self.players[turn].bet == self.current_bet {
                                         format!("[C]   Check")
                                     
-                                    } else if call_amount == player_money {
+                                    } else if call_amount <= player_money {
                                         format!("[C]   Call {}", self.current_bet)
 
                                     } else {
