@@ -24,6 +24,7 @@ pub mod actor {
     pub mod action;
     pub mod actor;
     pub mod human;
+    pub mod adhoc;
 }
 
 fn main() {

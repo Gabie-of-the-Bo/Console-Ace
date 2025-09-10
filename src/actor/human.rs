@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
 
-use crate::{actor::{action::Action, actor::PokerActor}, engine::{controls::Controls, player::BIG_BLIND}};
+use crate::{actor::{action::Action, actor::{ActorInfo, PokerActor}}, engine::{controls::Controls, player::BIG_BLIND}};
 
 pub struct HumanActor {
     started: bool,
@@ -22,12 +22,12 @@ impl PokerActor for HumanActor {
         self.started
     }
 
-    fn done(&mut self, forced: bool, controls: &mut Controls, last_raise: usize, pot: usize) -> bool {
+    fn done(&mut self, forced: bool, controls: &mut Controls, info: ActorInfo) -> bool {
         if forced {
             return true;
         }
 
-        let min_raise = BIG_BLIND.max(last_raise);
+        let min_raise = BIG_BLIND.max(info.last_raise);
 
         if controls.is_pressed(KeyCode::Char('f')) {
             self.selected_action = Some(Action::Fold);
@@ -40,10 +40,10 @@ impl PokerActor for HumanActor {
         
         } else if controls.is_pressed(KeyCode::Char('p')) {
             if controls.is_pressed(KeyCode::Char('d')) {
-                self.selected_action = Some(Action::Raise(pot));
+                self.selected_action = Some(Action::Raise(info.current_bet));
             
             } else if controls.is_pressed(KeyCode::Char('t')) {
-                self.selected_action = Some(Action::Raise(pot * 2));
+                self.selected_action = Some(Action::Raise(info.current_bet * 2));
             }
 
         } else {

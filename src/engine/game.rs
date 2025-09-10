@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{actor::{action::Action, actor::SimpleActor, human::HumanActor}, engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
+use crate::{actor::{action::Action, actor::ActorInfo, adhoc::AdHocActor, human::HumanActor}, engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
 
 pub struct Game {
     pub controls: Controls,
@@ -19,9 +19,9 @@ impl Game {
     pub fn new() -> Self {
         let players = vec!(
             Player::new("Player 1".into(), 100, Box::new(HumanActor::new())),
-            Player::new("Player 2".into(), 100, Box::new(SimpleActor::new())),
-            Player::new("Player 3".into(), 100, Box::new(SimpleActor::new())),
-            Player::new("Player 4".into(), 100, Box::new(SimpleActor::new())),
+            Player::new("Player 2".into(), 100, Box::new(AdHocActor::new())),
+            Player::new("Player 3".into(), 100, Box::new(AdHocActor::new())),
+            Player::new("Player 4".into(), 100, Box::new(AdHocActor::new())),
         );
 
         Game { 
@@ -455,8 +455,21 @@ impl Game {
                     self.players[turn].actor.start_turn();
                 }
 
+                // Information for the actors to decide
+                let actor_info = ActorInfo {
+                    player: turn,
+                    last_raise: self.last_raise,
+                    current_bet: self.current_bet,
+                    hand: self.players[turn].hand.clone(),
+                    community: self.board[..num_flipped].to_vec(),
+                    players: self.players.iter().enumerate()
+                        .filter(|p| !p.1.lost())
+                        .map(|(i, p)| (i, (p.money, p.bet, p.folded)))
+                        .collect(),
+                };
+
                 if !sb && !bb { // Small blind
-                    if self.players[turn].actor.done(true, &mut self.controls, self.last_raise, self.current_bet) {
+                    if self.players[turn].actor.done(true, &mut self.controls, actor_info) {
                         self.perform_action(Action::Raise(SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
@@ -464,7 +477,7 @@ impl Game {
                     }
 
                 } else if sb && !bb { // Big blind
-                    if self.players[turn].actor.done(true, &mut self.controls, self.last_raise, self.current_bet) {
+                    if self.players[turn].actor.done(true, &mut self.controls, actor_info) {
                         self.perform_action(Action::Raise(BIG_BLIND - SMALL_BLIND), turn);
                         self.players[turn].actor.end_turn();
     
@@ -498,7 +511,7 @@ impl Game {
                             );
                         }
 
-                        if self.players[turn].actor.done(false, &mut self.controls, self.last_raise, self.current_bet) {
+                        if self.players[turn].actor.done(false, &mut self.controls, actor_info) {
                             let action = self.players[turn].actor.get_action();
 
                             if matches!(action, Action::Raise(_)) {

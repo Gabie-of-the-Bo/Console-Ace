@@ -1,11 +1,20 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
-use crate::{actor::action::Action, engine::{controls::Controls, timer::Timer}};
+use crate::{actor::action::Action, engine::{controls::Controls, timer::Timer}, poker::card::Card};
+
+pub struct ActorInfo {
+    pub player: usize,
+    pub last_raise: usize, 
+    pub current_bet: usize,
+    pub hand: Vec<Card>,
+    pub community: Vec<Card>,
+    pub players: HashMap<usize, (usize, usize, bool)>, // Idx -> (chips, bet, folded)
+}
 
 pub trait PokerActor {
     fn start_turn(&mut self);
     fn turn_started(&self) -> bool;
-    fn done(&mut self, forced: bool, game: &mut Controls, last_raise: usize, pot: usize) -> bool;
+    fn done(&mut self, forced: bool, controls: &mut Controls, info: ActorInfo) -> bool;
     fn get_action(&mut self) -> Action;
     fn end_turn(&mut self);
 }
@@ -31,7 +40,7 @@ impl PokerActor for SimpleActor {
         self.started
     }
 
-    fn done(&mut self, _forced: bool, _controls: &mut Controls, _last_raise: usize, _pot: usize) -> bool {
+    fn done(&mut self, _forced: bool, _controls: &mut Controls, _info: ActorInfo) -> bool {
         self.timer.done()
     }
 

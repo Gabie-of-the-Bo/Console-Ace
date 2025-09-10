@@ -5,7 +5,9 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 
 use crate::poker::{card::Card, deck::Deck, play::analyze_play};
 
-pub fn monte_carlo_likeliness_to_win(hand: &[Card], community: &[Card], unknowns: usize, iters: usize) -> f32 {
+pub fn monte_carlo_likeliness_to_win(hand: &[Card], community: &[Card], num_players: usize, iters: usize) -> f32 {
+    let unknowns = 7 - (hand.len() + community.len());
+
     let all = hand.iter().chain(community).collect::<Vec<_>>();
     let deck = Deck::new();
     
@@ -17,7 +19,7 @@ pub fn monte_carlo_likeliness_to_win(hand: &[Card], community: &[Card], unknowns
         // Shuffle available cards
         let mut rng = rng();
 
-        let mut available_clone = available_cards.choose_multiple(&mut rng, unknowns + 6)
+        let mut available_clone = available_cards.choose_multiple(&mut rng, unknowns + 2 * (num_players - 1))
             .cloned()
             .collect::<Vec<_>>();
 
@@ -28,12 +30,12 @@ pub fn monte_carlo_likeliness_to_win(hand: &[Card], community: &[Card], unknowns
         // Get possible hands
         let mut hands = vec!(hand.to_vec());
 
-        for _ in 0..3 {
+        for _ in 0..(num_players - 1) {
             hands.push(available_clone.drain(0..2).cloned().collect());
         }
 
         // Check who won
-        let mut plays = (0..4)
+        let mut plays = (0..num_players)
             .map(|i| analyze_play(&hands[i], &new_community))
             .enumerate()
             .collect::<Vec<_>>();
