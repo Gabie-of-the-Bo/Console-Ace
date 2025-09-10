@@ -18,10 +18,10 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         let players = vec!(
-            Player::new("Player 1".into(), 100, Box::new(HumanActor::new())),
-            Player::new("Player 2".into(), 100, Box::new(AdHocActor::new())),
-            Player::new("Player 3".into(), 100, Box::new(AdHocActor::new())),
-            Player::new("Player 4".into(), 100, Box::new(AdHocActor::new())),
+            Player::new("Player 1".into(), 300, Box::new(HumanActor::new())),
+            Player::new("Player 2".into(), 300, Box::new(AdHocActor::new())),
+            Player::new("Player 3".into(), 300, Box::new(AdHocActor::new())),
+            Player::new("Player 4".into(), 300, Box::new(AdHocActor::new())),
         );
 
         Game { 
