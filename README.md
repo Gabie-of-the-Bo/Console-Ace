@@ -1,5 +1,11 @@
 # 🂡 Console Ace 🂡
 
+<p align="center">
+  <a href="https://gabie-of-the-bo.github.io/Ryna-Language/">
+    <img src="https://github.com/Gabie-of-the-Bo/Console-Ace/blob/main/img/capture.png?raw=true" width="60%" style="border-radius: .3em;">
+  </a>
+</p>
+
 **Console Ace** is a fast, colorful, and surprisingly pretty Texas Hold’em poker game that runs entirely in your terminal. It feels almost like a web app, but it’s pure console magic.  
 
 ## ✨ Features
