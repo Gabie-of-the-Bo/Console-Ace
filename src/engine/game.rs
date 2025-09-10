@@ -504,8 +504,8 @@ impl Game {
                                     format!("[R]   {raise_bet} {}", min_raise),
                                     format!("[D]   {raise_bet} {}", min_raise * 2),
                                     format!("[T]   {raise_bet} {}", min_raise * 3),
-                                    format!("[P+D] {raise_bet} {}", self.current_bet),
-                                    format!("[P+T] {raise_bet} {}", self.current_bet * 2),
+                                    format!("[B+D] {raise_bet} {}", self.current_bet),
+                                    format!("[B+T] {raise_bet} {}", self.current_bet * 2),
                                     format!("[F]   Fold")
                                 )
                             );

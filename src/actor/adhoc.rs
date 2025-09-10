@@ -42,7 +42,7 @@ impl PokerActor for AdHocActor {
             const CALL_DEFEND_FRAC: f32 = 0.075;
             const GOOD_ADVANTAGE: f32 = 1.5;
             const GREAT_ADVANTAGE: f32 = 2.0;
-            const FACTASTIC_ADVANTAGE: f32 = 3.0;
+            const FANTASTIC_ADVANTAGE: f32 = 3.0;
 
             // Estimate winning probability as is
             let num_players = info.players.len();
@@ -75,7 +75,7 @@ impl PokerActor for AdHocActor {
                 let raise_pot = Action::Raise(info.current_bet.min(max_raise));
                 let raise_double_pot = Action::Raise((info.current_bet * 2).min(max_raise));
 
-                if advantage > FACTASTIC_ADVANTAGE {
+                if advantage > FANTASTIC_ADVANTAGE {
                     self.selected_action = Some(select_weighted(
                         &[raise_triple, raise_pot, raise_double_pot], 
                         &[1.0, advantage, advantage / 2.0]

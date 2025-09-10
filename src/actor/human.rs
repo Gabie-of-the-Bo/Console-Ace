@@ -38,7 +38,7 @@ impl PokerActor for HumanActor {
         } else if controls.is_pressed(KeyCode::Char('r')) {
             self.selected_action = Some(Action::Raise(min_raise));
         
-        } else if controls.is_pressed(KeyCode::Char('p')) {
+        } else if controls.is_pressed(KeyCode::Char('b')) {
             if controls.is_pressed(KeyCode::Char('d')) {
                 self.selected_action = Some(Action::Raise(info.current_bet));
             
