@@ -568,11 +568,12 @@ impl Game {
 
                     let balanced_bet = self.players.iter()
                         .filter(|p| !p.folded)
+                        .filter(|p| !p.is_all_in())
                         .filter(|p| !p.lost())
                         .all(|i| i.bet == self.current_bet);
 
                     // Pass stage
-                    if turn == self.dealer && balanced_bet {
+                    if turn == self.dealer && (balanced_bet || only_one_left) {
                         if num_flipped < 5 {
                             // Pre-flop
                             if num_flipped == 0 {
