@@ -18,10 +18,10 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         let players = vec!(
-            Player::new("Player 1".into(), 300, Box::new(HumanActor::new())),
-            Player::new("Player 2".into(), 300, Box::new(AdHocActor::new())),
-            Player::new("Player 3".into(), 300, Box::new(AdHocActor::new())),
-            Player::new("Player 4".into(), 300, Box::new(AdHocActor::new())),
+            Player::new("Player 1".into(), 1000, Box::new(HumanActor::new())),
+            Player::new("Player 2".into(), 1000, Box::new(AdHocActor::new())),
+            Player::new("Player 3".into(), 1000, Box::new(AdHocActor::new())),
+            Player::new("Player 4".into(), 1000, Box::new(AdHocActor::new())),
         );
 
         Game { 
@@ -165,16 +165,16 @@ impl Game {
 
     pub fn draw_single_player_chips(&self, col: usize, row: usize, player: &Player) {
         set_color(CREAM, Color::Black);
-        clear_section(row, col, row, col + 10);
+        clear_section(row, col, row, col + 11);
 
         move_cursor(row, col + 1);
-        write_str(&format!("Chips {:>3}", player.money));
+        write_str(&format!("Chips {:>4}", player.money));
 
         set_color(BAIZE, CREAM);
         move_cursor(row - 1, col);
-        write_str(&"▄".repeat(11));
+        write_str(&"▄".repeat(12));
         move_cursor(row + 1, col);
-        write_str(&"▀".repeat(11));
+        write_str(&"▀".repeat(12));
     }
 
     pub fn draw_player_chips(&self) {
@@ -185,7 +185,7 @@ impl Game {
         }
 
         if !self.players[2].lost() {
-            self.draw_single_player_chips(35, 3, &self.players[2]);
+            self.draw_single_player_chips(34, 3, &self.players[2]);
         }
 
         if !self.players[3].lost() {
@@ -195,16 +195,16 @@ impl Game {
 
     pub fn draw_single_player_bet(&self, col: usize, row: usize, player: &Player) {
         set_color(CREAM, Color::Black);
-        clear_section(row, col, row, col + 8);
+        clear_section(row, col, row, col + 9);
 
         move_cursor(row, col + 1);
-        write_str(&format!("Bet {:>3}", player.bet));
+        write_str(&format!("Bet {:>4}", player.bet));
 
         set_color(BAIZE, CREAM);
         move_cursor(row - 1, col);
-        write_str(&"▄".repeat(9));
+        write_str(&"▄".repeat(10));
         move_cursor(row + 1, col);
-        write_str(&"▀".repeat(9));
+        write_str(&"▀".repeat(10));
     }
 
     pub fn draw_player_bets(&self) {
@@ -215,7 +215,7 @@ impl Game {
         }
 
         if !self.players[2].lost() {
-            self.draw_single_player_bet(35, 6, &self.players[2]);
+            self.draw_single_player_bet(34, 6, &self.players[2]);
         }
 
         if !self.players[3].lost() {
