@@ -681,16 +681,18 @@ impl Game {
             },
 
             GameState::Resolving => {
+                let visibility = self.players.iter().map(|i| i.folded).collect::<Vec<_>>();
+
                 for (i, card) in self.players[3].hand.iter_mut().enumerate() {
-                    card.draw(109, 11 + i * 10, false);
+                    card.draw(109, 11 + i * 10, visibility[3]);
                 }
 
                 for (i, card) in self.players[2].hand.iter_mut().enumerate() {
-                    card.draw(25 + 24 + i * 16, 2, false);
+                    card.draw(25 + 24 + i * 16, 2, visibility[2]);
                 }
 
                 for (i, card) in self.players[1].hand.iter_mut().enumerate() {
-                    card.draw(5, 11 + i * 10, false);
+                    card.draw(5, 11 + i * 10, visibility[1]);
                 }
 
                 for (i, card) in self.players[0].hand.iter_mut().enumerate() {
