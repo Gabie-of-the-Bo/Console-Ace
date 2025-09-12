@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use crossterm::{event::{self, Event, KeyCode, MouseEventKind}, style::Color, terminal::{disable_raw_mode, enable_raw_mode}};
 
-use crate::{actor::{action::Action, actor::ActorInfo, adhoc::AdHocActor, human::HumanActor}, engine::{console::{clear, clear_section, disable_mouse_capture, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE}, deck::Deck, play::{analyze_play, Play}}};
+use crate::{actor::{action::Action, actor::ActorInfo, adhoc::AdHocActor, human::HumanActor}, engine::{console::{clear, clear_section, disable_mouse_capture, draw_square_double, enable_mouse_capture, enter_alternate_screen, hide_cursor, leave_alternate_screen, move_cursor, resize, set_color, show_cursor, write_str}, controls::Controls, player::{Player, BIG_BLIND, SMALL_BLIND}, state::GameState}, poker::{card::{Card, BAIZE, CREAM, DBLUE, DRED}, deck::Deck, play::{analyze_play, Play}}};
 
 pub struct Game {
     pub controls: Controls,
@@ -27,7 +27,7 @@ impl Game {
         Game { 
             controls: Controls::new(),
             deck: Deck::new(),
-            state: GameState::Dealing,
+            state: GameState::MainMenu(false),
             players,
             board: vec!(),
             dealer: 0,
@@ -91,6 +91,55 @@ impl Game {
 
     pub fn draw_ui(&self) {
 
+    }
+
+    pub fn draw_baize(&self) {
+        set_color(BAIZE, Color::Black);
+        clear_section(0, 0, 40, 125);
+    }
+
+    pub fn draw_start_text(&self) {
+        let txt = "
+            ┏━┓┏━┓┏━╸┏━┓┏━┓   ┏━╸┏┓╻╺┳╸┏━╸┏━┓   ╺┳╸┏━┓   ┏━┓╺┳╸┏━┓┏━┓╺┳╸
+            ┣━┛┣┳┛┣╸ ┗━┓┗━┓   ┣╸ ┃┗┫ ┃ ┣╸ ┣┳┛    ┃ ┃ ┃   ┗━┓ ┃ ┣━┫┣┳┛ ┃ 
+            ╹  ╹┗╸┗━╸┗━┛┗━┛   ┗━╸╹ ╹ ╹ ┗━╸╹┗╸    ╹ ┗━┛   ┗━┛ ╹ ╹ ╹╹┗╸ ╹ 
+        ";
+
+        const WIDTH: usize = 60;
+
+        set_color(BAIZE, Color::White);
+
+        for (i, line) in txt.trim_start().lines().enumerate() {
+            move_cursor(28 + i, (125 / 2) - (WIDTH / 2));
+            write_str(line.trim());
+        }
+    }
+
+    pub fn draw_logo(&self) {
+        let txt = "
+               █████████  ██████   ██████ ██████████        █████████                    
+              ███▒▒▒▒▒███▒▒██████ ██████ ▒▒███▒▒▒▒███      ███▒▒▒▒▒███                   
+             ███     ▒▒▒  ▒███▒█████▒███  ▒███   ▒▒███    ▒███    ▒███   ██████   ██████ 
+            ▒███          ▒███▒▒███ ▒███  ▒███    ▒███    ▒███████████  ███▒▒███ ███▒▒███
+            ▒███          ▒███ ▒▒▒  ▒███  ▒███    ▒███    ▒███▒▒▒▒▒███ ▒███ ▒▒▒ ▒███████ 
+            ▒▒███     ███ ▒███      ▒███  ▒███    ███     ▒███    ▒███ ▒███  ███▒███▒▒▒  
+             ▒▒█████████  █████     █████ ██████████      █████   █████▒▒██████ ▒▒██████ 
+              ▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒     ▒▒▒▒▒ ▒▒▒▒▒▒▒▒▒▒      ▒▒▒▒▒   ▒▒▒▒▒  ▒▒▒▒▒▒   ▒▒▒▒▒▒  
+        ";
+
+        const WIDTH: usize = 77;
+
+        set_color(BAIZE, Color::White);
+        draw_square_double(8, 20, 19, 104);
+
+        for (i, line) in txt.trim_end().lines().skip(1).enumerate() {
+            set_color(BAIZE, DRED);
+            move_cursor(10 + i, (125 / 2) - (WIDTH / 2));
+            write_str(&line[12..].chars().take(45).collect::<String>());
+
+            set_color(BAIZE, Color::White);
+            write_str(&line[12..].chars().skip(45).collect::<String>());
+        }
     }
 
     pub fn draw_single_player_play(&self, col: usize, row: usize, play: String) {
@@ -428,7 +477,12 @@ impl Game {
 
     pub fn update(&mut self) -> bool {
         match self.state {
-            GameState::MainMenu => todo!(),
+            GameState::MainMenu(_) => {
+                if self.controls.is_pressed(KeyCode::Enter) {
+                    self.draw_baize();
+                    self.state = GameState::Dealing;
+                }
+            },
             
             GameState::Dealing => {
                 // Prepare players
@@ -451,10 +505,7 @@ impl Game {
 
                 self.state = GameState::Round(0, self.next_turn(self.dealer), false, false, false);
 
-                // Draw green baize
-                set_color(BAIZE, Color::Black);
-                clear_section(0, 0, 40, 125);
-
+                // Draw chips
                 self.draw_player_chips();
                 self.draw_player_bets();
                 self.draw_dealer_chip();
@@ -649,7 +700,18 @@ impl Game {
 
     pub fn render(&mut self) {
         match self.state {
-            GameState::MainMenu => todo!(),
+            GameState::MainMenu(drawn) => {
+                if !drawn {
+                    // Draw green baize
+                    self.draw_baize();
+
+                    // Draw text
+                    self.draw_start_text();
+                    self.draw_logo();
+
+                    self.state = GameState::MainMenu(true);
+                }
+            },
 
             GameState::Dealing |
             GameState::Collecting => {},

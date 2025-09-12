@@ -5,6 +5,7 @@ use crate::engine::console::{clear_section, move_cursor, set_color, write_str};
 pub const BAIZE: Color = Color::Rgb { r: 53, g: 101, b: 77 };
 pub const CREAM: Color = Color::Rgb { r: 227, g: 168, b: 105 };
 pub const DBLUE: Color = Color::Rgb { r: 8, g: 72, b: 135 };
+pub const DRED: Color = Color::Rgb { r: 154, g: 49, b: 55 };
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Suit {
