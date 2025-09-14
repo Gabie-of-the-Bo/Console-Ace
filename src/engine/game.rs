@@ -98,6 +98,31 @@ impl Game {
         clear_section(0, 0, 40, 125);
     }
 
+    pub fn draw_win_text(&self, won: bool) {
+        let txt =  if won { 
+            "
+            ╻ ╻┏━┓╻ ╻   ╻ ╻┏━┓┏┓╻╻
+            ┗┳┛┃ ┃┃ ┃   ┃╻┃┃ ┃┃┗┫╹
+             ╹ ┗━┛┗━┛   ┗┻┛┗━┛╹ ╹╹
+            " 
+        } else {
+            "
+            ╻ ╻┏━┓╻ ╻   ╻  ┏━┓┏━┓╺┳╸
+            ┗┳┛┃ ┃┃ ┃   ┃  ┃ ┃┗━┓ ┃ 
+             ╹ ┗━┛┗━┛   ┗━╸┗━┛┗━┛ ╹ 
+            "
+        };
+
+        let width = 22 + (!won as usize) * 2;
+
+        set_color(Color::Black, Color::White);
+
+        for (i, line) in txt.lines().skip(1).enumerate() {
+            move_cursor(19 + i, (125 / 2) - (width / 2));
+            write_str(&line.chars().skip(12).collect::<String>());
+        }
+    }
+
     pub fn draw_start_text(&self) {
         let txt = "
             ┏━┓┏━┓┏━╸┏━┓┏━┓   ┏━╸┏┓╻╺┳╸┏━╸┏━┓   ╺┳╸┏━┓   ┏━┓╺┳╸┏━┓┏━┓╺┳╸
@@ -688,11 +713,44 @@ impl Game {
                 if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
                     self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
 
-                    self.state = GameState::Collecting;
-                    self.dealer = self.next_turn(self.dealer);
-                    self.current_bet = 0;
+                    let finished = self.players.iter().filter(|p| !p.lost()).count() == 1;
+
+                    if finished {
+                        // Take cards back to deck
+                        for p in &mut self.players {
+                            while !p.hand.is_empty() {
+                                self.deck.push(p.hand.pop().unwrap());
+                            }
+                        }
+
+                        while !self.board.is_empty() {
+                            self.deck.push(self.board.pop().unwrap());
+                        }
+        
+                        self.deck.reset_draw_cache();
+                        self.deck.shuffle();
+
+                        // State transition
+                        let won = !self.players[0].lost();
+                        self.state = GameState::End(won);
+
+                        self.draw_win_text(won);
+                        
+                    } else {
+                        self.state = GameState::Collecting;
+                        self.dealer = self.next_turn(self.dealer);
+                        self.current_bet = 0;
+                    }
                 }
             },
+
+            GameState::End(_) => {
+                if self.controls.is_pressed(KeyCode::Enter) && !self.controls.is_locked(KeyCode::Enter) {
+                    self.controls.lock(KeyCode::Enter, Duration::from_millis(500));
+                
+                    self.state = GameState::MainMenu(false);
+                }
+            }
         };
 
         return false;
@@ -714,7 +772,8 @@ impl Game {
             },
 
             GameState::Dealing |
-            GameState::Collecting => {},
+            GameState::Collecting |
+            GameState::End(_) => {},
             
             GameState::Round(num_flipped, turn, sb, bb, _) => {
                 self.draw_turn_chip(turn);
